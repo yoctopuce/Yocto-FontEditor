@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" version="1.1" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+<path d="m4 2v28" style="fill:none;stroke-width:1px;stroke:#e8e8e8"/>
+<path d="m12 2v28" style="fill:none;stroke-width:1px;stroke:#e8e8e8"/>
+<path d="m20 2v28" style="fill:none;stroke-width:1px;stroke:#e8e8e8"/>
+<path d="m28 2v28" style="fill:none;stroke-width:1px;stroke:#e8e8e8"/>
+<path d="m2 4h28" style="fill:none;stroke-width:1px;stroke:#e8e8e8"/>
+<path d="m2 12h28" style="fill:none;stroke-width:1px;stroke:#e8e8e8"/>
+<path d="m2 20h28" style="fill:none;stroke-width:1px;stroke:#e8e8e8"/>
+<path d="m2 28h28" style="fill:none;stroke-width:1px;stroke:#e8e8e8"/>
+<path d="m4 6v-2h2" style="fill:none;stroke-width:1px;stroke:#000000"/>
+<path d="m6 28h-2v-2" style="fill:none;stroke-width:1px;stroke:#000000"/>
+<path d="m28 6v-2h-2" style="fill:none;stroke-width:1px;stroke:#000000"/>
+<path d="m28 26v2h-2" style="fill:none;stroke-width:1px;stroke:#000000"/>
+<path d="m8 4h4" style="fill:none;stroke-width:1px;stroke:#000000"/>
+<path d="m14 4h4" style="fill:none;stroke-width:1px;stroke:#777777"/>
+<path d="m20 4h4" style="fill:none;stroke-width:1px;stroke:#000000"/>
+<path d="m8 28h4" style="fill:none;stroke-width:1px;stroke:#000000"/>
+<path d="m14 28h4" style="fill:none;stroke-width:1px;stroke:#000000"/>
+<path d="m20 28h4" style="fill:none;stroke-width:1px;stroke:#000000"/>
+<path d="m4 12v-4" style="fill:none;stroke-width:1px;stroke:#000000"/>
+<path d="m4 18v-4" style="fill:none;stroke-width:1px;stroke:#000000"/>
+<path d="m4 24v-4" style="fill:none;stroke-width:1px;stroke:#000000"/>
+<path d="m28 12v-4" style="fill:none;stroke-width:1px;stroke:#000000"/>
+<path d="m28 18v-4" style="fill:none;stroke-width:1px;stroke:#000000"/>
+<path d="m28 24v-4" style="fill:none;stroke-width:1px;stroke:#000000"/>
+<path d="m10 11v3h12v-3l5 5-5 5v-3h-12v3l-5-5z" style="fill-rule:evenodd;fill:#3d9745"/>
+<path d="m16 6v3" style="fill:none;stroke-width:1px;stroke:#777777"/>
+<path d="m16 24v3" style="fill:none;stroke-width:1px;stroke:#777777"/>
+<path d="m16 10v1" style="fill:none;stroke-width:1px;stroke:#777777"/>
+<path d="m16 12v3" style="fill:none;stroke-width:1px;stroke:#777777"/>
+<path d="m16 18v3" style="fill:none;stroke-width:1px;stroke:#777777"/>
+<path d="m16 22v1" style="fill:none;stroke-width:1px;stroke:#777777"/>
+</svg>

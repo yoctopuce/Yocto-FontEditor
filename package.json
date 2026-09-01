@@ -1,0 +1,23 @@
+{
+  "name": "Yocto-FontEditor-project",
+  "author": "Yoctopuce",
+  "description": "Yocto-Display Font Editor ",
+  "version": "2.1.12672",
+  "keywords": [
+    "Yoctopuce",
+    "TypeScript",
+    "Font editor",
+    "Yocto-Display"
+  ],
+  "type": "module",
+  "scripts": {
+    "build_tools": "cd tools && tsc",
+    "build": "tsc && npm run build_tools && node tools/app-server.js --build_only",
+    "app-server": "npm run build_tools && node tools/app-server.js dist/Yocto-FontEditor.html"
+  },
+  "devDependencies": {
+    "@types/node": "^12.0.0",
+    "esbuild": "^0.28.1",
+    "typescript": "4.9.5"
+  }
+}

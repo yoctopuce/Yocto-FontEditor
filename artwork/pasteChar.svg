@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" version="1.1" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+<rect x="9" y="2" width="5" height="8" style="fill:none;stroke-linecap:round;stroke-linejoin:round;stroke:#d4d4d4"/>
+<rect x="2" y="2" width="5" height="8" style="fill:none;stroke-linecap:round;stroke-linejoin:round;stroke:#d4d4d4"/>
+<rect x="16" y="2" width="5" height="8" style="fill:none;stroke-linecap:round;stroke-linejoin:round;stroke:#d4d4d4"/>
+<rect x="23" y="2" width="5" height="8" style="fill:none;stroke-linecap:round;stroke-linejoin:round;stroke:#d4d4d4"/>
+<rect x="2" y="12" width="5" height="8" style="fill:none;stroke-linecap:round;stroke-linejoin:round;stroke:#d4d4d4"/>
+<rect x="16" y="12" width="5" height="8" style="fill:none;stroke-linecap:round;stroke-linejoin:round;stroke:#d4d4d4"/>
+<rect x="23" y="12" width="5" height="8" style="fill:none;stroke-linecap:round;stroke-linejoin:round;stroke:#656565"/>
+<rect x="9" y="12" width="5" height="8" style="fill:none;stroke-linecap:round;stroke-linejoin:round;stroke:#d4d4d4"/>
+<rect x="3" y="12" width="5" height="8" style="fill:none;stroke-linecap:round;stroke-linejoin:round;stroke:#d4d4d4"/>
+<rect x="16" y="22" width="5" height="8" style="fill:none;stroke-linecap:round;stroke-linejoin:round;stroke:#d4d4d4"/>
+<rect x="23" y="22" width="5" height="8" style="fill:none;stroke-linecap:round;stroke-linejoin:round;stroke:#d4d4d4"/>
+<rect x="2" y="22" width="5" height="8" style="fill:none;stroke-linecap:round;stroke-linejoin:round;stroke:#d4d4d4"/>
+<rect x="9" y="22" width="5" height="8" style="fill:none;stroke-linecap:round;stroke-linejoin:round;stroke:#d4d4d4"/>
+<rect x="3" y="9" width="14" height="20" style="fill:#ffffff;stroke-linecap:round;stroke-linejoin:round;stroke:#898989"/>
+<path d="m12 19h-4l-2 2v2l2 2h2l2-1" style="fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-width:2;stroke:#000000"/>
+<path d="m6 14 1-1h4l2 3v8l1 1h1" style="fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-width:2;stroke:#000000"/>
+<path d="m16 16h6v-2l2 2-2 2v-2" style="fill-rule:evenodd;fill:#4e9551;stroke-linecap:round;stroke-linejoin:round;stroke-width:2;stroke:#369b35"/>
+</svg>

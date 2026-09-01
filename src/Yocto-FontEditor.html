@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta charset="UTF-8">
+</head>
+<body id="body">
+<script type='module'>
+  import { WebApp }  from './Yocto-FontEditor.min.js'; // do not modify
+  const app = new WebApp(window.location.hostname);
+  app.run();
+</script>
+<script nomodule="">
+document.write("<p style='font-family: sans-serif; text-align:center'>Yocto-FontEditor cannot run on this browser. Sorry.<br>Consider using a more recent browser>. </p>")
+</script>
+
+</body>

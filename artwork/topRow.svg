@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" version="1.1" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+<path d="m6 6h20" style="fill:none;stroke-linecap:round;stroke-width:1px;stroke:#7f7f7f"/>
+<path d="m12 26v-20" style="fill:none;stroke-linecap:round;stroke-width:1px;stroke:#7f7f7f"/>
+<path d="m22 26v-20" style="fill:none;stroke-linecap:round;stroke-width:1px;stroke:#7f7f7f"/>
+<path d="m26 26v-20" style="fill:none;stroke-linecap:round;stroke-width:1px;stroke:#7f7f7f"/>
+<path d="m16 26v-19" style="fill:none;stroke-linecap:round;stroke-width:1px;stroke:#7f7f7f"/>
+<path d="m6 26v-20" style="fill:none;stroke-linecap:round;stroke-width:1px;stroke:#7f7f7f"/>
+<path d="m6 12h20" style="fill:none;stroke-linecap:round;stroke-width:1px;stroke:#7f7f7f"/>
+<path d="m6 16h20" style="fill:none;stroke-linecap:round;stroke-width:1px;stroke:#7f7f7f"/>
+<path d="m6 22h20" style="fill:none;stroke-linecap:round;stroke-width:1px;stroke:#7f7f7f"/>
+<path d="m6 26h20" style="fill:none;stroke-linecap:round;stroke-width:1px;stroke:#7f7f7f"/>
+<rect x="6" y="6" width="20" height="5" style="fill-opacity:.5;fill:#9a9a9a;stroke-linecap:round;stroke-linejoin:round;stroke:#000000"/>
+<path d="m4 2v3h-3v3h3v3h3v-3h3v-3h-3v-3z" style="fill:#62c866;stroke-linecap:round;stroke:#2e5e30"/>
+<rect x="2" y="6" width="9" height="3" style="fill:#c86262;stroke-linecap:round;stroke:#5e2e2e"/>
+</svg>
