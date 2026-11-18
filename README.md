@@ -6,8 +6,10 @@ Yocto-FontEditor
 
 This Yocto-FontEditor is a web based application meant to help you create
 your own bitmap fonts for Yoctopuce displays. It allows to make fonts
-scratch,  load/save .yfm[^1] file and import glyphs from True Type Fonts[^2][^3] 
-It even allows to constantly preview your work on an actual Yocto-display[^3].
+scratch,  load/save .yfm[^1] file and import glyphs from True Type fonts[^2][^3] 
+as well as BDF Fonts[^4] files. It even allows to constantly
+preview your work on an actual Yocto-display[^3].
+
 
 
 ## How to use it ?
@@ -43,6 +45,15 @@ it with your default browser, and then monitor the source files and recompile th
 every time a change is detected. In other words, after each modification, you
 just have to make sure the compilation went fine and hit reload on your browser. 
 
+## The Windows 7 case
+If you are still developping with Windows 7, the latest version of Node.js you can use is 12 
+and you will have to make a few adjustements to the 'package.json' file:
+``` 
+"@types/node": "^12.0.0",
+"esbuild": "0.21.5",
+"typescript": "5.0.4"
+```
+
 ## Folder content
 
 | file           | description                                    |
@@ -55,7 +66,7 @@ just have to make sure the compilation went fine and hit reload on your browser.
 
 | folder         | description                                     |
 |:---------------|:-------------------------------------------------|
-| artwork        | various artwork[^4]                              | 
+| artwork        | various artwork[^5]                              | 
 | dist           | ready-to-use compiled files                      | 
 | obj            | compiled modules                                 |
 | src            | All sources files                                |
@@ -72,6 +83,8 @@ fonts distributed by sites like [openfont.org](https://openfont.org/).
 [^3]:Some features require a [VirtualHub V2](https://www.yoctopuce.com/EN/virtualhub.php) 
 to run on the computer running the application.
 
-[^4]:Artwork files are just reference files used for the design, they
+[^4][Glyph Bitmap Distribution Format (BDF)]((https://en.wikipedia.org/wiki/Glyph_Bitmap_Distribution_Format)) is a old bitmap font format.
+
+[^5]:Artwork files are just reference files used for the design, they
 are not used directly in the application. The actual graphics are
 defined in the  [ressources.ts files](src/ressources.ts).

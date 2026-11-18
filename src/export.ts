@@ -91,9 +91,12 @@ export class ExportFontUI extends UserInterfacePanel
   {
     private characterset: CharacterChooser;
     private exportBtn: TxtButton;
+    private downloadBtn: TxtButton
     private fsList: HTMLSelectElement;
     private filename: HTMLInputElement;
     private targetoptions: targetFileSystemElement[]
+    private canExport : boolean = false
+
 
     constructor(container: HTMLDivElement, characterset: CharacterChooser)
       {
@@ -135,8 +138,8 @@ export class ExportFontUI extends UserInterfacePanel
         TD = document.createElement("td")
         TD.colSpan = 2;
         TD.style.textAlign = "right"
-        let downloadBtn: TxtButton = new TxtButton("Direct download", "Download Font file to local computer", (src: Button) => this.downloadFont(src));
-        TD.appendChild(downloadBtn.htmlelement)
+        this.downloadBtn = new TxtButton("Direct download", "Download Font file to local computer", (src: Button) => this.downloadFont(src));
+        TD.appendChild(this.downloadBtn.htmlelement)
         this.exportBtn = new TxtButton("Export", "Export font file to choosen Yoctopuce file system", (src: Button) => this.onExportBtnClick(src));
         this.exportBtn.enabled = false;
         TD.appendChild(this.exportBtn.htmlelement)
@@ -148,6 +151,13 @@ export class ExportFontUI extends UserInterfacePanel
         this.body.style.justifyContent = "center"; /* Horizontal centering */
         this.body.style.alignItems = "center";     /* Vertical centering */
       }
+
+    public canExportFontFile(ok:boolean)
+    { if (this.canExport != ok)
+       { this.canExport = ok;
+        this.refreshExportButton();
+       }
+    }
 
     private checkFilename()
       {
@@ -171,6 +181,11 @@ export class ExportFontUI extends UserInterfacePanel
     public show(selectedFontFsSerial: string | null, filename: string | null)
       {
         this.visible = true
+        if (filename)
+          {
+            let n: number = filename.lastIndexOf('.')
+            if (n>0) filename=filename.substring(0,n)+".yfm"
+          }
         if (filename != null) this.filename.value = filename;
         if (selectedFontFsSerial != null)
           {
@@ -182,12 +197,14 @@ export class ExportFontUI extends UserInterfacePanel
     private refreshExportButton()
       {
         let ok: boolean = this.checkFilename();
+        ok = ok && this.canExport;
         if (this.targetoptions.length <= 0) ok = false;
         if (ok)
           {
             ok = this.targetoptions[parseInt(this.fsList.value)].isOnline
           }
         this.exportBtn.enabled = ok;
+        this.downloadBtn.enabled = this.canExport;
       }
 
     private findFileSystem(serial: string): number
@@ -264,14 +281,16 @@ export class ExportFontUI extends UserInterfacePanel
       {
         let data: Uint8Array | null = this.characterset.getYfmtData()
         if (data != null)
-          {
+          { let blob: Blob = new Blob([data], { type:"application/octet-stream" });
+            let myurl: string = URL.createObjectURL(blob);
             var element = document.createElement('a');
-            let payload: string = btoa(YAPI.imm_bin2str(data));
-            element.setAttribute('href', 'data:application/octet-stream;base64,' + payload);
+
+            element.setAttribute('href', myurl);
             element.setAttribute('download', (this.filename.value != "") ? this.filename.value : "customFont.yfm");
             element.style.display = 'none';
             document.body.appendChild(element);
             element.click();
+            setTimeout(() => URL.revokeObjectURL(myurl), 1000);
             TimeMachine.userJustSavedHisWork()
             document.body.removeChild(element);
           }

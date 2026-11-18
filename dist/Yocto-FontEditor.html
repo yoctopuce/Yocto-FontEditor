@@ -16,7 +16,7 @@ __name(_Const, "Const");
 var Const = _Const;
 Const.appTitle = "Yoctopuce displays .yfm font editor";
 Const.appName = "Yocto-FontEditor";
-Const.version = "75804";
+Const.version = "76909";
 Const.WelcomePanelBgColor = "#f0f0f0";
 Const.titleBgColor = "#2b69e7";
 Const.titleTxtColor = "white";
@@ -35,6 +35,7 @@ Const.ButtonEnabledBorderColor = "#404040";
 Const.ButtonDisabledBorderColor = "#808080";
 Const.ImgButtonSize = 32;
 Const.BadInputBgColor = "#FFa0a0";
+Const.DemoText = "ABC {efg} [123]";
 
 // obj/yoctolib/yocto_api.js
 var YAPI_SUCCESS = 0;
@@ -4796,7 +4797,7 @@ var _YModule = class _YModule extends YFunction {
       sep = "";
       for (let ii_1 of filelist) {
         name = this.imm_json_get_key(ii_1, "name");
-        if (name.length > 0 && !(name == "startupConf.json")) {
+        if (name.length > 0 && !(name == "startupConf.json") && !(name.substr(0, 1) == ".")) {
           if (name.substr(name.length - 1, 1) == "/") {
             file_data = "";
           } else {
@@ -7704,7 +7705,8 @@ var _YGenericHub = class _YGenericHub {
         }
         try {
           let data = await this._yapi.system_env.downloadfile(url, this._yapi);
-          infoJson = JSON.parse(YAPI.imm_bin2str(data));
+          let datastr = YAPI.imm_bin2str(data);
+          infoJson = JSON.parse(datastr);
           if (infoJson) {
             infoJson.stamp = YAPI.GetTickCount();
             if (infoJson.serialNumber) {
@@ -7855,8 +7857,13 @@ var _YGenericHub = class _YGenericHub {
       }
       return true;
     }
+    let nextOpenID;
     let openIDwords = tryOpenID.split("_");
-    let nextOpenID = openIDwords[0] + "_" + (parseInt(openIDwords[1]) + 1).toString();
+    if (openIDwords.length > 1) {
+      nextOpenID = openIDwords[0] + "_" + (parseInt(openIDwords[1]) + 1).toString();
+    } else {
+      nextOpenID = String.fromCharCode(Math.random() * 79 + 48, Math.random() * 79 + 48, Math.random() * 79 + 48);
+    }
     if (this.retryDelay < 5e3)
       this.retryDelay *= 2;
     if (this._yapi._logLevel >= 4) {
@@ -9857,7 +9864,7 @@ var _YAPIContext = class _YAPIContext {
     this._networkTimeoutMs = DEFAULT_NETWORK_TIMEOUT_MS;
     this._deviceListValidityMs = DEFAULT_DEVICE_LIST_VALIDITY_MS;
     this._crcTable = null;
-    this.defaultEncoding = "binary";
+    this.defaultEncoding = "iso-8859-1";
     this.exceptionsDisabled = false;
     this.SUCCESS = 0;
     this.NOT_INITIALIZED = -1;
@@ -10760,16 +10767,15 @@ var _YAPIContext = class _YAPIContext {
     }
     return num;
   }
-  /** Convert a binary object to string
+  /** Convert an iso-latin-1 encoded binary object to string
    */
   imm_bin2str(bin_data) {
-    let len = bin_data.length;
-    let res = "";
-    for (let i = 0; i < len; i += 20) {
-      let subdata = bin_data.subarray(i, Math.min(i + 20, len));
-      res += String.fromCharCode.apply(null, Array.from(subdata));
-    }
-    return res;
+    return new TextDecoder(this.defaultEncoding).decode(bin_data);
+  }
+  /** Convert an utf-8 encoded binary object to string
+   */
+  imm_utf2str(bin_data, int_start, int_len) {
+    return new TextDecoder().decode(bin_data.subarray(int_start, int_start + int_len));
   }
   /** Convert a string to binary object
    */
@@ -11416,10 +11422,9 @@ var _YAPIContext = class _YAPIContext {
     return await this.GetDeviceListValidity_internal();
   }
   /**
-   * Returns the path to the dynamic YAPI library. This function is useful for debugging problems loading the
-   * dynamic library YAPI. This function is supported by the C#, Python and VB languages. The other
-   * libraries return an
-   * empty string.
+   * Returns the path to the dynamic YAPI library. This function is useful for debugging
+   * problems loading the dynamic library YAPI. This function is supported by the C#,
+   * Python and VB languages. The other libraries return an empty string.
    *
    * @return a string containing the path of the YAPI dynamic library.
    */
@@ -11596,7 +11601,7 @@ var _YAPIContext = class _YAPIContext {
   imm_GetAPIVersion() {
     return (
       /* version number patched automatically */
-      "2.1.15804"
+      "2.1.16909"
     );
   }
   /**
@@ -11764,6 +11769,9 @@ var _YAPIContext = class _YAPIContext {
     if (this._logLevel >= 4) {
       this.imm_log("Registering hub: " + url);
     }
+    if (!url) {
+      return this.imm_setErr(errmsg, YAPI_INVALID_ARGUMENT, "invalid empty URL", YAPI_INVALID_ARGUMENT);
+    }
     if (url === "net") {
       if (this.system_env.hasSSDP) {
         this._detectType |= this.DETECT_NET;
@@ -11834,6 +11842,9 @@ var _YAPIContext = class _YAPIContext {
    * On failure returns a negative error code.
    */
   async PreregisterHub(url, errmsg) {
+    if (!url) {
+      return this.imm_setErr(errmsg, YAPI_INVALID_ARGUMENT, "invalid empty URL", YAPI_INVALID_ARGUMENT);
+    }
     let urlInfo = new _YY_UrlInfo(url);
     let hub = this.imm_getHub(urlInfo);
     if (!hub) {
@@ -12026,6 +12037,9 @@ var _YAPIContext = class _YAPIContext {
    * On failure returns a negative error code.
    */
   async TestHub(url, mstimeout, errmsg) {
+    if (!url) {
+      return this.imm_setErr(errmsg, YAPI_INVALID_ARGUMENT, "invalid empty URL", YAPI_INVALID_ARGUMENT);
+    }
     if (url == "net") {
       return this.imm_setErr(errmsg, YAPI_INVALID_ARGUMENT, "Not supported", YAPI_INVALID_ARGUMENT);
     }
@@ -13234,6 +13248,20 @@ var _CharacterSetRenderer = class _CharacterSetRenderer {
     this._baseline = header.baseline;
     body.removeChild(canvas);
   }
+  initFromBdfData(bdfData) {
+    this._baseline = bdfData.getBaseLine();
+    this._generalHeight = bdfData.getHeight();
+    for (let ascii = 0; ascii <= 266; ascii++) {
+      this.charList[ascii] = null;
+      let img = bdfData.getChar(ascii);
+      if (img) {
+        if (img.width > 0) {
+          this.charList[ascii] = new CharacterRenderer("", img.width, bdfData.getHeight(), 0, String.fromCharCode(ascii));
+          this.charList[ascii].setContents(img);
+        }
+      }
+    }
+  }
   initFromScratch(first, last, width, height) {
     for (let i = 0; i < 255; i++) {
       if (i < first || i > last)
@@ -13242,6 +13270,7 @@ var _CharacterSetRenderer = class _CharacterSetRenderer {
         this.charList[i] = new CharacterRenderer("", width, height, 0, String.fromCharCode(i));
     }
     this._baseline = 1;
+    this._generalHeight = height;
   }
   async importFromFont(fontName, fontSizeInPx, firstchar, lastchar, antiAliasingFilter, fillStroke, outlineWidth) {
     let body = document.getElementById("body");
@@ -13292,6 +13321,8 @@ var _CharacterSetRenderer = class _CharacterSetRenderer {
     console.log("offsetTop= " + ofsetTop + "/" + delta);
     console.log("offsetBot= " + ofsetBottom + "/" + delta);
     this._generalHeight = height - ofsetTop - ofsetBottom;
+    if (this._generalHeight > 255)
+      this._generalHeight = 255;
     let pixelcount = new Array(height).fill(0);
     let blackpixelcount = new Array(height).fill(0);
     ctx.textBaseline = "top";
@@ -14026,6 +14057,10 @@ var _CharacterChooser = class _CharacterChooser extends UserInterfacePanel {
   }
   initFromScratch(firstChar, lastChar, width, height) {
     this.renderer.initFromScratch(firstChar, lastChar, width, height);
+    this.refreshCharactersTable();
+  }
+  initFromBdfData(bdfData) {
+    this.renderer.initFromBdfData(bdfData);
     this.refreshCharactersTable();
   }
   initFromYfmData(data) {
@@ -15044,6 +15079,14 @@ var _YDisplayLayer = class _YDisplayLayer {
     this.ALIGN_CENTER_RIGHT = 13;
     this.ALIGN_BASELINE_RIGHT = 14;
     this.ALIGN_BOTTOM_RIGHT = 15;
+    this.QRMODE_UPCASE_ECCL = 0;
+    this.QRMODE_UPCASE_ECCM = 1;
+    this.QRMODE_UPCASE_ECCQ = 2;
+    this.QRMODE_UPCASE_ECCH = 3;
+    this.QRMODE_BYTES_ECCL = 4;
+    this.QRMODE_BYTES_ECCM = 5;
+    this.QRMODE_BYTES_ECCQ = 6;
+    this.QRMODE_BYTES_ECCH = 7;
     this._yapi = obj_parent._yapi;
     this._display = obj_parent;
     this._id = int_id >> 0;
@@ -15415,6 +15458,55 @@ var _YDisplayLayer = class _YDisplayLayer {
     return await this._display.upload(destname, gifimage);
   }
   /**
+   * Displays a QR code at the specified position on the layer. You can choose from several
+   * QR code representation modes, depending on the desired content type (restricted alphabet
+   * vs. all characters) and the error correction level (ECC level, which can be Low, Medium,
+   * Quartile, or High). A code with a full character set and a higher error correction level is
+   * larger than a code with a limited character set and a low error correction level. You can
+   * precalculate the size of the QR code before displaying it by calling this function with
+   * a zoom factor of zero.
+   *
+   * @param x : the distance in pixels from the left edge of the layer to the left edge of the QR code
+   * @param y : the distance in pixels from the top edge of the layer to the top edge of the QR code
+   * @param mode : the QR code encoding mode, selected from the enumeration YDisplayLayer.QRMODE:
+   *         YDisplayLayer.QRMODE_BYTES_ECCH, YDisplayLayer.QRMODE_BYTES_ECCQ,
+   *         YDisplayLayer.QRMODE_BYTES_ECCM, YDisplayLayer.QRMODE_BYTES_ECCL,
+   *         YDisplayLayer.QRMODE_UPCASE_ECCH, YDisplayLayer.QRMODE_UPCASE_ECCQ,
+   *         YDisplayLayer.QRMODE_UPCASE_ECCM, YDisplayLayer.QRMODE_UPCASE_ECCL.
+   * @param zoom : the magnification factor, between 0 (not displayed) and 16
+   *         (each point of the QR code is represented by 16x16 pixels on the screen).
+   * @param text : the text to encode in the QR code
+   *
+   * @return the size of one side of the QR code in pixels if successful.
+   *
+   * On failure, throws an exception or returns a negative error code.
+   */
+  async drawQRCode(x, y, mode, zoom, text) {
+    let content;
+    let contentLen;
+    let destname;
+    let json;
+    let qrSize;
+    content = this._yapi.imm_str2bin(text);
+    contentLen = content.length;
+    if (zoom == 0) {
+      content = new Uint8Array(0);
+    }
+    await this._display.flushLayers();
+    destname = "layer" + String(Math.round(this._id)) + ":Q" + String(mode) + "*" + String(Math.round(zoom)) + "," + String(Math.round(contentLen)) + "@" + String(Math.round(x)) + "," + String(Math.round(y));
+    json = await this._display._uploadEx(destname, content);
+    if (json.length == 0) {
+      this._display._throw(YAPI.IO_ERROR, "failed to receive size");
+      return YAPI.IO_ERROR;
+    }
+    qrSize = YAPIContext.imm_atoi(this._display.imm_json_get_key(json, "size"));
+    if (qrSize >= 999) {
+      this._display._throw(YAPI.INVALID_ARGUMENT, "text is too large");
+      return YAPI.INVALID_ARGUMENT;
+    }
+    return qrSize;
+  }
+  /**
    * Draws a bitmap at the specified position. The bitmap is provided as a binary object,
    * where each pixel maps to a bit, from left to right and from top to bottom.
    * The most significant bit of each byte maps to the leftmost pixel, and the least
@@ -15755,6 +15847,14 @@ YDisplayLayer.ALIGN_TOP_RIGHT = 12;
 YDisplayLayer.ALIGN_CENTER_RIGHT = 13;
 YDisplayLayer.ALIGN_BASELINE_RIGHT = 14;
 YDisplayLayer.ALIGN_BOTTOM_RIGHT = 15;
+YDisplayLayer.QRMODE_UPCASE_ECCL = 0;
+YDisplayLayer.QRMODE_UPCASE_ECCM = 1;
+YDisplayLayer.QRMODE_UPCASE_ECCQ = 2;
+YDisplayLayer.QRMODE_UPCASE_ECCH = 3;
+YDisplayLayer.QRMODE_BYTES_ECCL = 4;
+YDisplayLayer.QRMODE_BYTES_ECCM = 5;
+YDisplayLayer.QRMODE_BYTES_ECCQ = 6;
+YDisplayLayer.QRMODE_BYTES_ECCH = 7;
 var _YDisplay = class _YDisplay extends YFunction {
   //--- (end of generated code: YDisplay attributes declaration)
   constructor(yapi, func) {
@@ -16084,6 +16184,7 @@ var _YDisplay = class _YDisplay extends YFunction {
   }
   /**
    * Changes the model of display to match the connected display panel.
+   * Value examples:  "E2_266_KS0_C1" , "E2_290_QS_0F22 , "E2_370_KS_0C1", "E2_417_KS_0D0" etc..
    * This function has no effect if the module does not support the selected
    * display panel. Remember to call the saveToFlash()
    * method of the module if the modification must be kept.
@@ -17563,7 +17664,7 @@ var _preViewStyleElementHWD = class _preViewStyleElementHWD extends preViewStyle
 __name(_preViewStyleElementHWD, "preViewStyleElementHWD");
 var preViewStyleElementHWD = _preViewStyleElementHWD;
 var _TextPreview = class _TextPreview extends UserInterfacePanel {
-  constructor(container, characterset) {
+  constructor(container, characterset, exportUI) {
     var _a, _b, _c, _d;
     super(container, true, true, false);
     this.zoomlevel = 1;
@@ -17572,6 +17673,7 @@ var _TextPreview = class _TextPreview extends UserInterfacePanel {
     this.demoHeight = 64;
     this.demoStyle = COLORSCHEME.OLED;
     this.setTitle("Preview");
+    this.exportUI = exportUI;
     this.characterset = characterset;
     this.body.style.display = "flex";
     this.body.style.alignItems = "center";
@@ -17791,7 +17893,15 @@ var _TextPreview = class _TextPreview extends UserInterfacePanel {
     let sizeStr = sizeInt.toString() + " Bytes";
     if (sizeInt >= 1024)
       sizeStr = (Math.round(100 * sizeInt / 1024) / 100).toString() + " KB";
-    this.sizeIndicator.innerText = "Expected file size: " + sizeStr;
+    if (sizeInt > 65535) {
+      this.sizeIndicator.style.color = "red";
+      this.sizeIndicator.innerText = "Expected file size: " + sizeStr + " (max is 64K) ";
+      this.exportUI.canExportFontFile(false);
+    } else {
+      this.sizeIndicator.style.color = Const.headerTxtColor;
+      this.sizeIndicator.innerText = "Expected file size: " + sizeStr;
+      this.exportUI.canExportFontFile(true);
+    }
     if (!currentChoice.isEmulation && drawing != null) {
       await currentChoice.refreshHwdDisplay(drawing, this.errmsg);
     }
@@ -18104,6 +18214,19 @@ var _YFiles = class _YFiles extends YFunction {
    * On failure, throws an exception or returns an empty content.
    */
   async download(pathname) {
+    let idx;
+    let plen;
+    let res;
+    plen = pathname.length;
+    idx = 0;
+    while (idx < plen && pathname.substr(idx, 1) == "/") {
+      idx = idx + 1;
+    }
+    if (idx < plen && pathname.substr(idx, 1) == ".") {
+      this._throw(this._yapi.INVALID_ARGUMENT, "Remote file access forbidden");
+      res = new Uint8Array(0);
+      return res;
+    }
     return await this._download(pathname);
   }
   /**
@@ -18190,6 +18313,41 @@ var _YFiles = class _YFiles extends YFunction {
     res = this._yapi.imm_bincrc(meta, 0, 4 * blkcnt) ^ 4294967295;
     res = (res & 2147483647) - 2 * (res >> 1 & 1073741824);
     return res;
+  }
+  /**
+   * Returns true if the path given as argument meets the requirements
+   * for use on a Yoctopuce device. This method checks for the
+   * maximum file name length, total path length and forbidden
+   * characters.
+   *
+   * @param path : a string representing a path
+   *
+   * @return a boolean
+   */
+  async isValidPath(path) {
+    let parts = [];
+    let pathLen;
+    let i;
+    let allowedChars;
+    pathLen = path.length;
+    if (pathLen > 250) {
+      return false;
+    }
+    parts = path.split("/");
+    for (let ii_0 of parts) {
+      if (ii_0.length > 31) {
+        return false;
+      }
+    }
+    allowedChars = "abcdefghijklmnopqrstuvwxyz./ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789_-[]()@";
+    i = 0;
+    while (i < pathLen) {
+      if (allowedChars.indexOf(path.substr(i, 1)) < 0) {
+        return false;
+      }
+      i = i + 1;
+    }
+    return true;
   }
   /**
    * Continues the enumeration of filesystems started using yFirstFiles().
@@ -18291,6 +18449,7 @@ var targetFileSystemElement = _targetFileSystemElement;
 var _ExportFontUI = class _ExportFontUI extends UserInterfacePanel {
   constructor(container, characterset) {
     super(container, true, false, true);
+    this.canExport = false;
     this.setTitle("Export");
     this.setFooterMessage("");
     this.characterset = characterset;
@@ -18331,8 +18490,8 @@ var _ExportFontUI = class _ExportFontUI extends UserInterfacePanel {
     TD = document.createElement("td");
     TD.colSpan = 2;
     TD.style.textAlign = "right";
-    let downloadBtn = new TxtButton("Direct download", "Download Font file to local computer", (src) => this.downloadFont(src));
-    TD.appendChild(downloadBtn.htmlelement);
+    this.downloadBtn = new TxtButton("Direct download", "Download Font file to local computer", (src) => this.downloadFont(src));
+    TD.appendChild(this.downloadBtn.htmlelement);
     this.exportBtn = new TxtButton("Export", "Export font file to choosen Yoctopuce file system", (src) => this.onExportBtnClick(src));
     this.exportBtn.enabled = false;
     TD.appendChild(this.exportBtn.htmlelement);
@@ -18343,6 +18502,12 @@ var _ExportFontUI = class _ExportFontUI extends UserInterfacePanel {
     this.body.style.display = "flex";
     this.body.style.justifyContent = "center";
     this.body.style.alignItems = "center";
+  }
+  canExportFontFile(ok) {
+    if (this.canExport != ok) {
+      this.canExport = ok;
+      this.refreshExportButton();
+    }
   }
   checkFilename() {
     let err = "";
@@ -18364,6 +18529,11 @@ var _ExportFontUI = class _ExportFontUI extends UserInterfacePanel {
   }
   show(selectedFontFsSerial, filename) {
     this.visible = true;
+    if (filename) {
+      let n = filename.lastIndexOf(".");
+      if (n > 0)
+        filename = filename.substring(0, n) + ".yfm";
+    }
     if (filename != null)
       this.filename.value = filename;
     if (selectedFontFsSerial != null) {
@@ -18374,12 +18544,14 @@ var _ExportFontUI = class _ExportFontUI extends UserInterfacePanel {
   }
   refreshExportButton() {
     let ok = this.checkFilename();
+    ok = ok && this.canExport;
     if (this.targetoptions.length <= 0)
       ok = false;
     if (ok) {
       ok = this.targetoptions[parseInt(this.fsList.value)].isOnline;
     }
     this.exportBtn.enabled = ok;
+    this.downloadBtn.enabled = this.canExport;
   }
   findFileSystem(serial) {
     for (let i = this.targetoptions.length - 1; i >= 0; i--)
@@ -18440,13 +18612,15 @@ var _ExportFontUI = class _ExportFontUI extends UserInterfacePanel {
   downloadFont(srcBtn) {
     let data = this.characterset.getYfmtData();
     if (data != null) {
+      let blob = new Blob([data], { type: "application/octet-stream" });
+      let myurl = URL.createObjectURL(blob);
       var element = document.createElement("a");
-      let payload = btoa(YAPI.imm_bin2str(data));
-      element.setAttribute("href", "data:application/octet-stream;base64," + payload);
+      element.setAttribute("href", myurl);
       element.setAttribute("download", this.filename.value != "" ? this.filename.value : "customFont.yfm");
       element.style.display = "none";
       document.body.appendChild(element);
       element.click();
+      setTimeout(() => URL.revokeObjectURL(myurl), 1e3);
       TimeMachine.userJustSavedHisWork();
       document.body.removeChild(element);
     }
@@ -18455,8 +18629,398 @@ var _ExportFontUI = class _ExportFontUI extends UserInterfacePanel {
 __name(_ExportFontUI, "ExportFontUI");
 var ExportFontUI = _ExportFontUI;
 
+// obj/bdf_decoder.js
+var _LineToken = class _LineToken {
+  constructor(lineNumber, keyword, tokens) {
+    this.lineNumber = lineNumber;
+    this.keyword = keyword;
+    this.tokens = tokens;
+  }
+};
+__name(_LineToken, "LineToken");
+var LineToken = _LineToken;
+var ProcessState;
+(function(ProcessState2) {
+  ProcessState2[ProcessState2["HEADER"] = 0] = "HEADER";
+  ProcessState2[ProcessState2["WAIT4CHAR"] = 1] = "WAIT4CHAR";
+  ProcessState2[ProcessState2["CHARHEADER"] = 2] = "CHARHEADER";
+  ProcessState2[ProcessState2["CHARBITMAP"] = 3] = "CHARBITMAP";
+})(ProcessState || (ProcessState = {}));
+var _BDFdecoder = class _BDFdecoder {
+  constructor() {
+    this.decodedCharacters = [];
+    this.filename = "";
+    this.defaultWidth = NaN;
+    this.defaultHeight = NaN;
+    this.defaultBaseline = 0;
+    this.currentWidth = NaN;
+    this.currentHeight = NaN;
+    this.currentASCII = NaN;
+    this.currentBBXSizeX = 0;
+    this.currentBBXSizeY = 0;
+    this.defaultOriginX = 0;
+    this.defaultOriginY = 0;
+    this.currentBBXOffsetX = 0;
+    this.currentBBXOffsetY = 0;
+    this.copyright = "";
+    this.lastError = "";
+    this.currentcanvas = null;
+    this.currentctx = null;
+    this.currentImageData = null;
+    this.currentScanline = 0;
+    this.processState = ProcessState.HEADER;
+    for (let i = 0; i < 256; i++)
+      this.decodedCharacters.push(null);
+  }
+  getChar(asciicode) {
+    var _a;
+    if (asciicode >= 0 && asciicode < this.decodedCharacters.length) {
+      if (this.decodedCharacters[asciicode]) {
+        let ctx = this.decodedCharacters[asciicode].getContext("2d", { willReadFrequently: true });
+        if (ctx) {
+          return ctx.getImageData(0, 0, (_a = this.decodedCharacters[asciicode]) === null || _a === void 0 ? void 0 : _a.width, this.decodedCharacters[asciicode].height);
+        }
+      }
+    }
+    return null;
+  }
+  getHeight() {
+    return this.defaultHeight;
+  }
+  getBaseLine() {
+    return this.defaultBaseline;
+  }
+  getCopyright() {
+    return this.copyright;
+  }
+  getFilename() {
+    return this.filename;
+  }
+  previewFont(canvas, text, align = 0) {
+    let totalWidth = 0;
+    for (let i = 0; i < text.length; i++) {
+      let ascii = text.charCodeAt(i);
+      if (ascii < this.decodedCharacters.length) {
+        if (this.decodedCharacters[ascii]) {
+          totalWidth += this.decodedCharacters[ascii].width;
+        }
+      }
+    }
+    let x = Math.trunc((canvas.width - totalWidth) / 2);
+    if (align < 0)
+      x = 2;
+    let y = Math.trunc((canvas.height - this.defaultHeight) / 2);
+    let ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx)
+      return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < text.length; i++) {
+      let ascii = text.charCodeAt(i);
+      if (ascii < this.decodedCharacters.length) {
+        if (this.decodedCharacters[ascii]) {
+          ctx.drawImage(this.decodedCharacters[ascii], x, y);
+          x += this.decodedCharacters[ascii].width;
+        }
+      }
+    }
+  }
+  drawDemo(c) {
+    c.width = 200;
+    let ok = false;
+    if (this.lastError == "") {
+      ok = true;
+      let h = this.getHeight();
+      if (h < 20)
+        h = 20;
+      c.height = h + 2;
+      this.previewFont(c, this.filename, -1);
+      let ctx = c.getContext("2d", { willReadFrequently: true });
+      if (ctx) {
+        let pixelBuffer = new Uint8Array(ctx.getImageData(0, 0, c.width, c.height).data.buffer);
+        ok = pixelBuffer.some((c2) => {
+          return c2 != 0;
+        });
+      }
+    }
+    if (!ok) {
+      c.height = 22;
+      let ctx = c.getContext("2d");
+      if (ctx) {
+        ctx.font = "12px Arial";
+        ctx.fillStyle = "grey";
+        ctx.fillText(this.filename, 2, c.height - 7);
+      }
+    }
+    c.style.backgroundColor = "white";
+    c.addEventListener("mouseover", () => {
+      c.style.backgroundColor = "lightgray";
+    });
+    c.addEventListener("mouseout", () => {
+      c.style.backgroundColor = "";
+    });
+  }
+  static processLine(line, linenumber) {
+    let n = line.indexOf(" ");
+    if (n < 0)
+      n = line.length;
+    let keyword = line.substring(0, n).toUpperCase();
+    let tokens = [];
+    while (n < line.length) {
+      while (line.charAt(n) == " " && n < line.length)
+        n++;
+      if (n < line.length) {
+        if (line.charAt(n) == '"') {
+          let n2 = line.indexOf('"', n + 1);
+          if (n2 < 0)
+            n2 = line.length;
+          tokens.push(line.substring(n + 1, n2));
+          n = n2 + 1;
+        } else {
+          let n2 = line.indexOf(" ", n);
+          if (n2 < 0)
+            n2 = line.length;
+          tokens.push(line.substring(n, n2));
+          n = n2;
+        }
+      }
+    }
+    return new LineToken(linenumber, keyword, tokens);
+  }
+  tokenError(data, errmsg) {
+    this.lastError = "Error at line " + data.lineNumber + ", " + data.keyword + " : " + errmsg;
+    return this.lastError;
+  }
+  generalError(errmsg) {
+    this.lastError = errmsg;
+    return this.lastError;
+  }
+  errorMsg() {
+    return this.lastError;
+  }
+  processData(data) {
+    switch (this.processState) {
+      case ProcessState.HEADER:
+        switch (data.keyword) {
+          case "FONTBOUNDINGBOX":
+            if (data.tokens.length != 4)
+              return this.tokenError(data, "Expected 4 parameters");
+            this.defaultWidth = parseInt(data.tokens[0]);
+            this.defaultHeight = parseInt(data.tokens[1]);
+            this.defaultOriginX = parseInt(data.tokens[2]);
+            this.defaultOriginY = parseInt(data.tokens[3]);
+            if (this.defaultWidth <= 0 || this.defaultHeight <= 0)
+              this.tokenError(data, "invalid dimension");
+            if (isNaN(this.defaultWidth) || isNaN(this.defaultHeight))
+              return this.tokenError(data, "invalid value");
+            break;
+          case "COMMENT":
+            if (data.tokens.length > 0) {
+              let comment = data.tokens[0].toUpperCase();
+              if (comment.indexOf("COPYRIGHT") >= 0 || comment.indexOf("(C)") >= 0)
+                this.copyright = data.tokens[0];
+            }
+            break;
+          case "COPYRIGHT":
+            if (data.tokens.length > 0) {
+              let line = "";
+              for (let i = 0; i < data.tokens.length; i++)
+                line += " " + data.tokens[i];
+              if (line.toUpperCase().indexOf("COPYRIGHT") < 0)
+                line = "Copyright:" + line;
+              this.copyright = line;
+            }
+            break;
+          case "FONT_DESCENT":
+            if (data.tokens.length != 1)
+              return this.tokenError(data, "Expected 1 parameter");
+            this.defaultBaseline = parseInt(data.tokens[0]);
+            if (isNaN(this.defaultBaseline))
+              return this.tokenError(data, "invalid value");
+            break;
+          case "ENDPROPERTIES":
+            if (isNaN(this.defaultWidth) || isNaN(this.defaultHeight))
+              return this.tokenError(data, "No FONTBOUNDINGBOX found");
+            this.processState = ProcessState.WAIT4CHAR;
+            break;
+        }
+        break;
+      case ProcessState.WAIT4CHAR:
+        if (data.keyword == "STARTCHAR") {
+          this.currentWidth = this.defaultWidth;
+          this.currentHeight = this.defaultHeight;
+          this.currentASCII = NaN;
+          this.currentBBXOffsetX = 0;
+          this.currentBBXOffsetY = 0;
+          this.currentBBXSizeX = this.currentWidth;
+          this.currentBBXSizeY = this.currentHeight;
+          this.processState = ProcessState.CHARHEADER;
+        }
+        break;
+      case ProcessState.CHARHEADER:
+        switch (data.keyword) {
+          case "ENCODING":
+            if (data.tokens.length != 1)
+              return this.tokenError(data, "Expected 1 parameter");
+            let ascii = parseInt(data.tokens[0]);
+            if (ascii >= 0 && ascii <= 255) {
+              this.currentASCII = parseInt(data.tokens[0]);
+              if (isNaN(this.currentASCII))
+                return this.tokenError(data, "invalid value");
+            } else
+              this.processState = ProcessState.WAIT4CHAR;
+            break;
+          case "BBX":
+            if (data.tokens.length != 4)
+              return this.tokenError(data, "Expected 4 parameters");
+            this.currentBBXSizeX = parseInt(data.tokens[0]);
+            this.currentBBXSizeY = parseInt(data.tokens[1]);
+            this.currentBBXOffsetX = parseInt(data.tokens[2]);
+            this.currentBBXOffsetY = parseInt(data.tokens[3]);
+            if (isNaN(this.currentBBXSizeX) || isNaN(this.currentBBXSizeY))
+              return this.tokenError(data, "invalid value");
+            if (isNaN(this.currentBBXOffsetX) || isNaN(this.currentBBXOffsetX))
+              return this.tokenError(data, "invalid value");
+            break;
+          case "DWIDTH":
+            if (data.tokens.length != 2)
+              return this.tokenError(data, "Expected 2 parameters");
+            this.currentWidth = parseInt(data.tokens[0]);
+            if (isNaN(this.currentWidth))
+              return this.tokenError(data, "invalid value");
+            break;
+          case "BITMAP":
+            if (isNaN(this.currentASCII))
+              return this.tokenError(data, "no ENCODING found");
+            this.processState = ProcessState.CHARBITMAP;
+            this.currentcanvas = document.createElement("canvas");
+            this.currentcanvas.style.border = "1px solid #d0d0d0";
+            this.currentcanvas.width = this.currentWidth;
+            this.currentcanvas.height = this.currentHeight;
+            if (this.currentcanvas.width <= 0)
+              return this.tokenError(data, "invalid width (" + this.currentcanvas.width + ")px");
+            if (this.currentcanvas.height <= 0)
+              return this.tokenError(data, "invalid height (" + this.currentcanvas.height + ")px");
+            this.currentcanvas.style.imageRendering = "pixelated";
+            this.currentctx = this.currentcanvas.getContext("2d", { willReadFrequently: true });
+            if (this.currentctx == null)
+              throw new RangeError("BDF decoder : Unable to  get Canvas context");
+            this.currentImageData = this.currentctx.getImageData(0, 0, this.currentWidth, this.currentHeight);
+            this.currentScanline = this.currentHeight - this.currentBBXOffsetY - this.currentBBXSizeY + this.defaultOriginY;
+            break;
+          case "ENDCHAR":
+            if (isNaN(this.currentASCII))
+              return this.tokenError(data, "no BITMAP found");
+            break;
+        }
+        break;
+      case ProcessState.CHARBITMAP:
+        switch (data.keyword) {
+          case "ENDCHAR":
+            this.processState = ProcessState.WAIT4CHAR;
+            if (this.currentctx && this.currentImageData && this.currentcanvas) {
+              this.currentctx.putImageData(this.currentImageData, 0, 0);
+              if (this.currentASCII < 256)
+                this.decodedCharacters[this.currentASCII] = this.currentcanvas;
+            }
+            break;
+          default:
+            if (this.currentImageData) {
+              let scanline = data.keyword;
+              let index = this.currentScanline * this.currentcanvas.width * 4;
+              if (this.currentScanline >= this.currentHeight)
+                this.tokenError(data, "Too many scanline data");
+              if (index >= 0)
+                for (let i = 0; i < scanline.length; i++) {
+                  let fourbits = parseInt(scanline.charAt(i), 16);
+                  if (isNaN(fourbits))
+                    return this.tokenError(data, "Expected hexadecimal character");
+                  for (let j = 0; j < 4; j++)
+                    if (i * 4 + j + this.currentBBXOffsetX < this.currentWidth) {
+                      let index2 = index + i * 16 + (j + this.currentBBXOffsetX) * 4;
+                      if (index < this.currentImageData.data.length - 4) {
+                        if (fourbits & 1 << 3 - j) {
+                          this.currentImageData.data[index2] = 0;
+                          this.currentImageData.data[index2 + 1] = 0;
+                          this.currentImageData.data[index2 + 2] = 0;
+                          this.currentImageData.data[index2 + 3] = 255;
+                        } else {
+                          this.currentImageData.data[index2] = 255;
+                          this.currentImageData.data[index2 + 1] = 255;
+                          this.currentImageData.data[index2 + 2] = 255;
+                          this.currentImageData.data[index2 + 3] = 0;
+                        }
+                      }
+                    }
+                }
+              this.currentScanline++;
+            }
+        }
+        break;
+    }
+    return "";
+  }
+  parse(rawdata, filename) {
+    let data;
+    this.filename = filename;
+    rawdata = rawdata + "\n";
+    let errmsg = "";
+    if (rawdata.substring(0, 9).toUpperCase() != "STARTFONT")
+      return this.generalError("File doesn't start with STARTFONT keyword, probably not a BDF file");
+    let linenumber = 1;
+    let pos = 0;
+    let cr = rawdata.indexOf("\n", pos);
+    while (cr >= 0) {
+      let line = rawdata.slice(pos, cr).replace("\r", "").trim();
+      pos = cr + 1;
+      if (line != "") {
+        data = _BDFdecoder.processLine(line, linenumber);
+        errmsg = this.processData(data);
+        if (errmsg != "")
+          return errmsg;
+      }
+      cr = rawdata.indexOf("\n", pos);
+      linenumber++;
+    }
+    if (this.processState == ProcessState.HEADER)
+      this.generalError("No ENDPROPERTIES found");
+    return "";
+  }
+};
+__name(_BDFdecoder, "BDFdecoder");
+var BDFdecoder = _BDFdecoder;
+
 // obj/welcome.js
 var _ttfFont = class _ttfFont {
+  static testFontProperRendering(fontname) {
+    if (fontname == "Times New Roman")
+      return true;
+    if (!_ttfFont.refFontCanvasCtx) {
+      _ttfFont.refFontCanvas = document.createElement("canvas");
+      _ttfFont.refFontCanvas.width = _ttfFont.RenderingTestWidth;
+      _ttfFont.refFontCanvas.height = _ttfFont.RenderingTestHeight;
+      _ttfFont.refFontCanvas.style.backgroundColor = "white";
+      _ttfFont.refFontCanvasCtx = _ttfFont.refFontCanvas.getContext("2d", { willReadFrequently: true });
+      if (_ttfFont.refFontCanvasCtx) {
+        _ttfFont.refFontCanvasCtx.textBaseline = "top";
+        _ttfFont.refFontCanvasCtx.font = _ttfFont.RenderingTestHeight.toString() + "px FAKEfOnt";
+        _ttfFont.refFontCanvasCtx.fillStyle = "black";
+        _ttfFont.refFontCanvasCtx.fillText(_ttfFont.Signature, 0, 0);
+        _ttfFont.refPixels = _ttfFont.refFontCanvasCtx.getImageData(0, 0, _ttfFont.RenderingTestWidth, _ttfFont.RenderingTestHeight);
+      }
+    }
+    if (!_ttfFont.refFontCanvasCtx)
+      return false;
+    if (_ttfFont.refPixels) {
+      _ttfFont.refFontCanvasCtx.clearRect(0, 0, _ttfFont.RenderingTestWidth, _ttfFont.RenderingTestHeight);
+      _ttfFont.refFontCanvasCtx.font = _ttfFont.RenderingTestHeight.toString() + "px " + fontname;
+      _ttfFont.refFontCanvasCtx.fillText(_ttfFont.Signature, 0, 0);
+      let pixels = _ttfFont.refFontCanvasCtx.getImageData(0, 0, _ttfFont.RenderingTestWidth, _ttfFont.RenderingTestHeight);
+      for (let i = 0; i < pixels.data.byteLength; i++)
+        if (pixels.data[i] != _ttfFont.refPixels.data[i])
+          return true;
+    }
+    return false;
+  }
   constructor(fontName, onchange) {
     this.name = "";
     YFileFont.InputID++;
@@ -18473,11 +19037,28 @@ var _ttfFont = class _ttfFont {
     this.label = document.createElement("label");
     this.label.htmlFor = id;
     this.label.innerText = this.name = fontName;
-    this.label.style.fontFamily = fontName;
+    _ttfFont.FontList.push(this.label);
     this.label.style.fontSize = "20px";
     this.select.addEventListener("change", () => {
       onchange();
     });
+  }
+  // used to perform font list rendering progressively,
+  static StartFontRendering() {
+    for (let i = 0; i < 10; i++) {
+      if (_ttfFont.FontList.length <= 0)
+        return;
+      let l = _ttfFont.FontList[0];
+      _ttfFont.FontList.splice(0, 1);
+      let fontname = l.innerText;
+      l.style.fontFamily = fontname;
+      if (!_ttfFont.testFontProperRendering(fontname)) {
+        l.style.color = "LightGray";
+        l.title = "Your browser blocked the renderering of '" + fontname + "' font. It might beleive this is  part of a fingerprinting scheme. You can either disable this security feature for this page, or use another browser. ";
+      }
+    }
+    if (_ttfFont.FontList.length > 0)
+      requestAnimationFrame((id) => _ttfFont.StartFontRendering());
   }
   get fontName() {
     return this.name;
@@ -18495,6 +19076,13 @@ var _ttfFont = class _ttfFont {
 __name(_ttfFont, "ttfFont");
 var ttfFont = _ttfFont;
 ttfFont.InputID = 0;
+ttfFont.RenderingTestWidth = 50;
+ttfFont.RenderingTestHeight = 16;
+ttfFont.refFontCanvas = null;
+ttfFont.refFontCanvasCtx = null;
+ttfFont.refPixels = null;
+ttfFont.Signature = "D\xE9mg%!";
+ttfFont.FontList = [];
 var _YFileFont = class _YFileFont {
   constructor(source, serial, friendlyName, filename, size, onchange) {
     this.flag = false;
@@ -18579,7 +19167,13 @@ __name(_YFileFont, "YFileFont");
 var YFileFont = _YFileFont;
 YFileFont.InputID = 0;
 var _WelcomePanel = class _WelcomePanel {
+  requiresVirtualHubMsg(badversion = false, badBuild = false) {
+    return "This feature requires a VirtualHub " + (badversion ? "<b>" : "") + "V2" + (badversion ? "</b>" : "") + ", " + (badBuild ? "<b>" : "") + "at least version 2.1.14003" + (badBuild ? "</b>" : "") + ", running on the local machine";
+  }
   constructor(container, charCollection, welcomeCompleted, welcomeCancelled) {
+    this.bdfList = [];
+    this.currentBdfFont = null;
+    this.bdfChooserCells = [];
     this.yFileFonts = [];
     this.dataLoadedFromLocalFs = null;
     this.dataLoadedFromLocalFsFilename = "";
@@ -18619,7 +19213,8 @@ var _WelcomePanel = class _WelcomePanel {
     this.fromScratch = this.AddOption("scratch", "Create a new font from scratch");
     this.loadFileFromYfile = this.AddOption("yfile", "Edit a .yfm font file from a Yoctopuce filesystem");
     this.loadFileFromLocalFileSystem = this.AddOption("localfs", "Edit a .yfm font file from the local filesystem");
-    this.ImportFont = this.AddOption("ttf", "Import a TrueType font from local computer");
+    this.ImportBdfFont = this.AddOption("bdf", "Import a BDF font from local computer");
+    this.ImportTtfFont = this.AddOption("ttf", "Import a TrueType font from local computer");
     this.activeDiv = document.createElement("div");
     this.activeDiv.style.marginLeft = "40px";
     this.container.appendChild(this.activeDiv);
@@ -18699,9 +19294,76 @@ var _WelcomePanel = class _WelcomePanel {
     });
     this.localfsDiv.appendChild(this.localfsFile);
     this.activeDiv.appendChild(this.localfsDiv);
+    this.bdfDiv = document.createElement("div");
+    this.bdfDiv.style.display = "none";
+    p = document.createElement("p");
+    p.innerText = "Import a Glyph Bitmap Distribution Format (BDF) font from local file system, choose one or more  BDF files: ";
+    this.bdfDiv.appendChild(p);
+    this.bdfFile = document.createElement("input");
+    this.bdfFile.type = "file";
+    this.bdfFile.accept = ".bdf";
+    this.bdfFile.id = "bdfChooser";
+    this.bdfFile.multiple = true;
+    this.bdfFile.addEventListener("change", async () => {
+      await this.loadBdfFiles();
+    });
+    p.appendChild(this.bdfFile);
+    this.bdfTable = document.createElement("table");
+    let tr = document.createElement("tr");
+    let td = document.createElement("td");
+    this.bdfFontList = document.createElement("div");
+    this.bdfFontList.style.backgroundColor = "white";
+    this.bdfFontList.style.width = "200px";
+    this.bdfFontList.style.height = "200px";
+    this.bdfFontList.style.overflowX = "hidden";
+    this.bdfFontList.style.overflowY = "auto";
+    this.bdfFontList.style.whiteSpace = "nowrap";
+    this.bdfFontList.style.border = "1px solid black";
+    td.appendChild(this.bdfFontList);
+    tr.appendChild(td);
+    td = document.createElement("td");
+    td.style.verticalAlign = "top";
+    this.sampleUI = document.createElement("p");
+    this.sampleUI.style.marginLeft = "10px";
+    this.sampleUI.innerText = "Type some sample text:";
+    this.bdfsampleText = document.createElement("input");
+    this.bdfsampleText.value = Const.DemoText;
+    this.bdfsampleText.addEventListener("input", () => {
+      this.bdfPreview();
+    });
+    this.sampleUI.appendChild(this.bdfsampleText);
+    this.bdfSampleCanvas = document.createElement("canvas");
+    this.bdfSampleCanvas.width = 420;
+    this.bdfSampleCanvas.height = 96;
+    this.bdfSampleCanvas.style.marginTop = "5px";
+    this.bdfSampleCanvas.style.border = "1px solid black";
+    this.bdfSampleCanvas.style.backgroundColor = "white";
+    this.bdfSampleCanvas.style.display = "";
+    new CanvasMagnifier(this.bdfSampleCanvas);
+    this.sampleUI.appendChild(this.bdfSampleCanvas);
+    this.bdfCopyright = document.createElement("p");
+    this.bdfCopyright.style.fontSize = "smaller";
+    this.bdfCopyright.style.color = "darkgray";
+    this.bdfCopyright.style.textAlign = "justify";
+    this.bdfCopyright.style.paddingLeft = "20px";
+    this.bdfCopyright.style.paddingRight = "20px";
+    this.bdfCopyright.style.verticalAlign = "top";
+    this.sampleUI.appendChild(this.bdfCopyright);
+    td.appendChild(this.sampleUI);
+    this.bdfError = document.createElement("p");
+    this.bdfError.style.display = "";
+    this.bdfError.style.paddingLeft = "10px";
+    this.bdfError.style.paddingRight = "10px";
+    this.bdfError.style.textAlign = "justify";
+    td.appendChild(this.bdfError);
+    tr.appendChild(td);
+    this.bdfTable.appendChild(tr);
+    this.bdfTable.style.display = "none";
+    this.bdfDiv.appendChild(this.bdfTable);
+    this.activeDiv.appendChild(this.bdfDiv);
     this.ttfDiv = document.createElement("div");
     this.ttfDiv.style.display = "none";
-    this.ttfDiv.innerHTML = "<br>This feature requires a VirtualHubV2 running on the local machine";
+    this.ttfDiv.innerHTML = "<br>" + this.requiresVirtualHubMsg();
     this.activeDiv.appendChild(this.ttfDiv);
     this.container.appendChild(this.activeDiv);
     this.loadResultDiv = document.createElement("div");
@@ -18770,6 +19432,68 @@ var _WelcomePanel = class _WelcomePanel {
     input2.style.backgroundColor = _WelcomePanel.BadInputColor;
     return false;
   }
+  onBdfFontSelected(font) {
+    this.currentBdfFont = null;
+    if (font) {
+      let err = font.errorMsg();
+      if (err == "") {
+        this.sampleUI.style.display = "";
+        this.bdfError.style.display = "none";
+        this.currentBdfFont = font;
+        this.bdfPreview();
+      } else {
+        this.sampleUI.style.display = "none";
+        this.bdfError.style.display = "";
+        this.bdfError.innerHTML = ressources.smallWarningIcon() + "&nbsp; Cannot use  file <b>" + font.getFilename() + "</b> : " + err;
+        this.bdfCopyright.innerText = "";
+      }
+    }
+    this.sanityCheck();
+  }
+  bdfloadCompleted(event, filename) {
+    if (event.target != null) {
+      if (event.target.result != null) {
+        let decoder = new TextDecoder("utf-8");
+        let data = decoder.decode(event.target.result);
+        let font = new BDFdecoder();
+        font.parse(data, filename);
+        this.bdfList.push(font);
+        let c = document.createElement("canvas");
+        c.title = filename;
+        font.drawDemo(c);
+        c.style.display = "inline";
+        c.style.verticalAlign = "middle";
+        let input = document.createElement("input");
+        input.type = "radio";
+        input.id = filename;
+        input.name = "BDFfile";
+        input.value = filename;
+        input.addEventListener("change", () => {
+          this.onBdfFontSelected(font);
+        });
+        let label = document.createElement("label");
+        label.htmlFor = input.id;
+        label.appendChild(c);
+        this.bdfFontList.appendChild(input);
+        this.bdfFontList.appendChild(label);
+        this.bdfFontList.appendChild(document.createElement("br"));
+        if (this.bdfList.length == 1) {
+          input.checked = true;
+          this.onBdfFontSelected(font);
+        }
+        this.bdfFontList.style.display = this.bdfList.length > 1 ? "" : "none";
+        this.bdfTable.style.paddingLeft = this.bdfList.length > 1 ? "0px" : "100px";
+      }
+    }
+    this.sanityCheck();
+  }
+  bdfPreview() {
+    if (!this.currentBdfFont)
+      return;
+    this.currentBdfFont.previewFont(this.bdfSampleCanvas, this.bdfsampleText.value);
+    this.bdfCopyright.style.textAlign = this.currentBdfFont.getCopyright().length > 60 ? "justify" : "right";
+    this.bdfCopyright.innerText = this.currentBdfFont.getCopyright();
+  }
   loadCompleted(event) {
     if (event.target != null) {
       if (event.target.result != null) {
@@ -18782,6 +19506,25 @@ var _WelcomePanel = class _WelcomePanel {
           this.showloadResult("Cannot use  file <b>" + this.dataLoadedFromLocalFsFilename + "</b> :" + header.error, true);
         }
         this.sanityCheck();
+      }
+    }
+  }
+  async loadBdfFiles() {
+    this.showloadResult("", false);
+    this.bdfTable.style.display = "";
+    this.bdfList = [];
+    while (this.bdfFontList.firstChild) {
+      this.bdfFontList.removeChild(this.bdfFontList.lastChild);
+    }
+    let files = this.bdfFile.files;
+    if (files) {
+      for (let i = 0; i < files.length; i++) {
+        let reader = new FileReader();
+        this.dataLoadedFromLocalFsFilename = files[i].name;
+        reader.addEventListener("loadend", (event) => {
+          this.bdfloadCompleted(event, files[i].name);
+        });
+        await reader.readAsArrayBuffer(files[i]);
       }
     }
   }
@@ -18857,16 +19600,18 @@ var _WelcomePanel = class _WelcomePanel {
   }
   async refreshTtfFontList() {
     let virtualHubUrl = "";
+    let virtualSerial = "";
     let virtualHubFound = false;
     if (this.virtualHubIsPresent)
       return;
     let h = YHub.FirstHubInUse();
     while (h != null) {
       if (h.get_connectionState() == YHub.CONNECTED) {
-        if (h.get_serialNumber().startsWith("VIRTHUB2")) {
+        if (h.get_serialNumber().startsWith("VIRTHUB")) {
           let urls = h.get_knownUrls();
           for (let i = 0; i < urls.length; i++) {
             if (urls[i].indexOf("127.0.0.1") >= 0) {
+              virtualSerial = h.get_serialNumber();
               virtualHubUrl = h.get_connectionUrl();
               virtualHubFound = true;
             }
@@ -18877,6 +19622,18 @@ var _WelcomePanel = class _WelcomePanel {
     }
     if (!virtualHubFound)
       return;
+    if (!virtualSerial.startsWith("VIRTHUB2")) {
+      this.ttfDiv.innerHTML = "<br>" + this.requiresVirtualHubMsg(true);
+      return;
+    }
+    let m = YModule.FindModule(virtualSerial + ".module");
+    let firmware = parseInt(await m.get_firmwareRelease());
+    if (!isNaN(firmware)) {
+      if (firmware < 74003) {
+        this.ttfDiv.innerHTML = "<br>" + this.requiresVirtualHubMsg(false, true);
+        return;
+      }
+    }
     virtualHubUrl = virtualHubUrl.replace("ws:", "http:");
     console.log(virtualHubUrl);
     let response = await fetch(virtualHubUrl + "fonts.txt");
@@ -18912,6 +19669,7 @@ var _WelcomePanel = class _WelcomePanel {
       listContainer.appendChild(this.availableTTfFonts[i].labelElement);
       listContainer.appendChild(document.createElement("br"));
     }
+    ttfFont.StartFontRendering();
     td.appendChild(listContainer);
     tr.appendChild(td);
     td = document.createElement("td");
@@ -19118,7 +19876,7 @@ var _WelcomePanel = class _WelcomePanel {
       this.ttfDemoInternalcanvasCtx = this.ttfDemoInternalcanvas.getContext("2d", { willReadFrequently: true });
       if (this.ttfDemoInternalcanvasCtx == null)
         throw new RangeError("Unable to get Canvas context");
-      sanityCheckIsRequired = this.ImportFont.checked;
+      sanityCheckIsRequired = this.ImportTtfFont.checked;
     }
     if (this.ttfDemoInternalcanvasCtx == null)
       return;
@@ -19277,8 +20035,10 @@ var _WelcomePanel = class _WelcomePanel {
       ok = this.chosenYFontFile() != null;
     if (this.loadFileFromLocalFileSystem.checked)
       ok = this.dataLoadedFromLocalFs != null;
-    if (this.ImportFont.checked)
+    if (this.ImportTtfFont.checked)
       ok = this.checkTtFontValue();
+    if (this.ImportBdfFont.checked)
+      ok = this.currentBdfFont != null;
     this.letGoBtn.enabled = ok;
   }
   choiceChanged(id) {
@@ -19286,6 +20046,7 @@ var _WelcomePanel = class _WelcomePanel {
     this.scratchDiv.style.display = id == "scratch" ? "" : "none";
     this.yfileDiv.style.display = id == "yfile" ? "" : "none";
     this.localfsDiv.style.display = id == "localfs" ? "" : "none";
+    this.bdfDiv.style.display = id == "bdf" ? "" : "none";
     this.ttfDiv.style.display = id == "ttf" ? "" : "none";
     this.sanityCheck();
   }
@@ -19343,11 +20104,15 @@ var _WelcomePanel = class _WelcomePanel {
         this.welcomeCompleted(selected.fileSystemSerial, selected.fontFilename);
       }
     }
+    if (this.ImportBdfFont.checked && this.currentBdfFont) {
+      this.charCollection.initFromBdfData(this.currentBdfFont);
+      this.welcomeCompleted(null, this.dataLoadedFromLocalFsFilename);
+    }
     if (this.loadFileFromLocalFileSystem.checked && this.dataLoadedFromLocalFs != null) {
       this.charCollection.initFromYfmData(this.dataLoadedFromLocalFs);
       this.welcomeCompleted(null, this.dataLoadedFromLocalFsFilename);
     }
-    if (this.ImportFont.checked) {
+    if (this.ImportTtfFont.checked) {
       if (this.ttfFontSize == null)
         return;
       if (this.ttfFirstChar == null)
@@ -19521,9 +20286,9 @@ var _WebApp = class _WebApp {
       if (this.charEditor)
         this.charEditor.edit(c);
     });
-    this.preview = new TextPreview(this.previewContainer, this.charChooser);
-    this.charEditor = new CharacterEditor(this.editorContainer, this.preview, this.charChooser);
     this.export = new ExportFontUI(this.exportContainer, this.charChooser);
+    this.preview = new TextPreview(this.previewContainer, this.charChooser, this.export);
+    this.charEditor = new CharacterEditor(this.editorContainer, this.preview, this.charChooser);
     this.welcome = new WelcomePanel(this.welcomeContainer, this.charChooser, (selectedFontFsSerial, filename) => {
       this.showMainUI(selectedFontFsSerial, filename);
     }, () => {
@@ -19570,7 +20335,10 @@ var _WebApp = class _WebApp {
     await YAPI.RegisterLogFunction((line) => {
       console.log(line);
     });
-    await YAPI.PreregisterHub(this.origin, errorMsg);
+    if (this.origin != "") {
+      if (this.origin.indexOf("www") < 0)
+        await YAPI.PreregisterHub(this.origin, errorMsg);
+    }
     await YAPI.PreregisterHub("127.0.0.1", errorMsg);
     await YAPI.RegisterDeviceArrivalCallback((m) => this.deviceArrival(m));
     await YAPI.RegisterDeviceRemovalCallback((m) => this.deviceRemoval(m));

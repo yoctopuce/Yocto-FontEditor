@@ -1,6 +1,6 @@
 /*********************************************************************
  *
- *  $Id: yocto_display.ts 75637 2026-08-20 16:54:40Z mvuilleu $
+ *  $Id: yocto_display.ts version 2.1.16909 (build 76909) $
  *
  *  Implements the high-level API for DisplayLayer functions
  *
@@ -81,6 +81,14 @@ export class YDisplayLayer
     public readonly ALIGN_CENTER_RIGHT: YDisplayLayer.ALIGN = 13;
     public readonly ALIGN_BASELINE_RIGHT: YDisplayLayer.ALIGN = 14;
     public readonly ALIGN_BOTTOM_RIGHT: YDisplayLayer.ALIGN = 15;
+    public readonly QRMODE_UPCASE_ECCL: YDisplayLayer.QRMODE = 0;
+    public readonly QRMODE_UPCASE_ECCM: YDisplayLayer.QRMODE = 1;
+    public readonly QRMODE_UPCASE_ECCQ: YDisplayLayer.QRMODE = 2;
+    public readonly QRMODE_UPCASE_ECCH: YDisplayLayer.QRMODE = 3;
+    public readonly QRMODE_BYTES_ECCL: YDisplayLayer.QRMODE = 4;
+    public readonly QRMODE_BYTES_ECCM: YDisplayLayer.QRMODE = 5;
+    public readonly QRMODE_BYTES_ECCQ: YDisplayLayer.QRMODE = 6;
+    public readonly QRMODE_BYTES_ECCH: YDisplayLayer.QRMODE = 7;
 
     // API symbols as static members
     public static readonly NO_INK: number = -1;
@@ -102,6 +110,14 @@ export class YDisplayLayer
     public static readonly ALIGN_CENTER_RIGHT: YDisplayLayer.ALIGN = 13;
     public static readonly ALIGN_BASELINE_RIGHT: YDisplayLayer.ALIGN = 14;
     public static readonly ALIGN_BOTTOM_RIGHT: YDisplayLayer.ALIGN = 15;
+    public static readonly QRMODE_UPCASE_ECCL: YDisplayLayer.QRMODE = 0;
+    public static readonly QRMODE_UPCASE_ECCM: YDisplayLayer.QRMODE = 1;
+    public static readonly QRMODE_UPCASE_ECCQ: YDisplayLayer.QRMODE = 2;
+    public static readonly QRMODE_UPCASE_ECCH: YDisplayLayer.QRMODE = 3;
+    public static readonly QRMODE_BYTES_ECCL: YDisplayLayer.QRMODE = 4;
+    public static readonly QRMODE_BYTES_ECCM: YDisplayLayer.QRMODE = 5;
+    public static readonly QRMODE_BYTES_ECCQ: YDisplayLayer.QRMODE = 6;
+    public static readonly QRMODE_BYTES_ECCH: YDisplayLayer.QRMODE = 7;
     //--- (end of generated code: YDisplayLayer attributes declaration)
 
     constructor(obj_parent: YDisplay, int_id: number)
@@ -530,6 +546,58 @@ export class YDisplayLayer
     }
 
     /**
+     * Displays a QR code at the specified position on the layer. You can choose from several
+     * QR code representation modes, depending on the desired content type (restricted alphabet
+     * vs. all characters) and the error correction level (ECC level, which can be Low, Medium,
+     * Quartile, or High). A code with a full character set and a higher error correction level is
+     * larger than a code with a limited character set and a low error correction level. You can
+     * precalculate the size of the QR code before displaying it by calling this function with
+     * a zoom factor of zero.
+     *
+     * @param x : the distance in pixels from the left edge of the layer to the left edge of the QR code
+     * @param y : the distance in pixels from the top edge of the layer to the top edge of the QR code
+     * @param mode : the QR code encoding mode, selected from the enumeration YDisplayLayer.QRMODE:
+     *         YDisplayLayer.QRMODE_BYTES_ECCH, YDisplayLayer.QRMODE_BYTES_ECCQ,
+     *         YDisplayLayer.QRMODE_BYTES_ECCM, YDisplayLayer.QRMODE_BYTES_ECCL,
+     *         YDisplayLayer.QRMODE_UPCASE_ECCH, YDisplayLayer.QRMODE_UPCASE_ECCQ,
+     *         YDisplayLayer.QRMODE_UPCASE_ECCM, YDisplayLayer.QRMODE_UPCASE_ECCL.
+     * @param zoom : the magnification factor, between 0 (not displayed) and 16
+     *         (each point of the QR code is represented by 16x16 pixels on the screen).
+     * @param text : the text to encode in the QR code
+     *
+     * @return the size of one side of the QR code in pixels if successful.
+     *
+     * On failure, throws an exception or returns a negative error code.
+     */
+    async drawQRCode(x: number, y: number, mode: YDisplayLayer.QRMODE, zoom: number, text: string): Promise<number>
+    {
+        let content: Uint8Array;
+        let contentLen: number;
+        let destname: string;
+        let json: Uint8Array;
+        let qrSize: number;
+        content = this._yapi.imm_str2bin(text);
+        contentLen = (content).length;
+        if (zoom == 0) {
+            // no need to send actual content for computing QR code size
+            content = new Uint8Array(0);
+        }
+        await this._display.flushLayers();
+        destname = 'layer' + String(Math.round(this._id)) + ':Q' + String(mode) + '*' + String(Math.round(zoom)) + ',' + String(Math.round(contentLen)) + '@' + String(Math.round(x)) + ',' + String(Math.round(y));
+        json = await this._display._uploadEx(destname, content);
+        if ((json).length == 0) {
+            this._display._throw(YAPI.IO_ERROR, 'failed to receive size');
+            return YAPI.IO_ERROR;
+        }
+        qrSize = YAPIContext.imm_atoi(this._display.imm_json_get_key(json, 'size'));
+        if (qrSize >= 999) {
+            this._display._throw(YAPI.INVALID_ARGUMENT, 'text is too large');
+            return YAPI.INVALID_ARGUMENT;
+        }
+        return qrSize;
+    }
+
+    /**
      * Draws a bitmap at the specified position. The bitmap is provided as a binary object,
      * where each pixel maps to a bit, from left to right and from top to bottom.
      * The most significant bit of each byte maps to the leftmost pixel, and the least
@@ -915,6 +983,17 @@ export namespace YDisplayLayer
         CENTER_RIGHT = 13,
         BASELINE_RIGHT = 14,
         BOTTOM_RIGHT = 15
+    }
+    export const enum QRMODE
+    {
+        UPCASE_ECCL = 0,
+        UPCASE_ECCM = 1,
+        UPCASE_ECCQ = 2,
+        UPCASE_ECCH = 3,
+        BYTES_ECCL = 4,
+        BYTES_ECCM = 5,
+        BYTES_ECCQ = 6,
+        BYTES_ECCH = 7
     }
 
     //--- (end of generated code: YDisplayLayer definitions)
@@ -1365,6 +1444,7 @@ export class YDisplay extends YFunction
 
     /**
      * Changes the model of display to match the connected display panel.
+     * Value examples:  "E2_266_KS0_C1" , "E2_290_QS_0F22 , "E2_370_KS_0C1", "E2_417_KS_0D0" etc..
      * This function has no effect if the module does not support the selected
      * display panel. Remember to call the saveToFlash()
      * method of the module if the modification must be kept.

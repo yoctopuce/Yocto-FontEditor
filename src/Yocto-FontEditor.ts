@@ -173,9 +173,10 @@ export class WebApp
         body.appendChild(this.exportContainer)
         body.appendChild(this.welcomeContainer)
         this.charChooser = new CharacterChooser(this.chooserContainer, renderer, () => {this.home()}, (c: CharacterRenderer | null) => {if (this.charEditor) this.charEditor.edit(c)});
-        this.preview = new TextPreview(this.previewContainer, this.charChooser)
-        this.charEditor = new CharacterEditor(this.editorContainer, this.preview, this.charChooser)
         this.export = new ExportFontUI(this.exportContainer, this.charChooser)
+        this.preview = new TextPreview(this.previewContainer, this.charChooser,this.export)
+        this.charEditor = new CharacterEditor(this.editorContainer, this.preview, this.charChooser)
+
         this.welcome = new WelcomePanel(this.welcomeContainer, this.charChooser, (selectedFontFsSerial: string | null, filename: string | null) => {this.showMainUI(selectedFontFsSerial, filename)}, () => {this.welcomeCanceled()})
         this.windowResized()
         window.addEventListener("resize", (_event: UIEvent) => { this.windowResized() })
@@ -212,7 +213,9 @@ export class WebApp
         YAPI._logLevel = 4;
         YAPI.SetNetworkTimeout(2500)
         await YAPI.RegisterLogFunction((line: string) => {console.log(line)})
-        await YAPI.PreregisterHub(this.origin, errorMsg);
+        if (this.origin!="")
+         if (this.origin.indexOf("www")<0)
+            await YAPI.PreregisterHub(this.origin, errorMsg);
         await YAPI.PreregisterHub("127.0.0.1", errorMsg);
         await YAPI.RegisterDeviceArrivalCallback((m: YModule) => this.deviceArrival(m))
         await YAPI.RegisterDeviceRemovalCallback((m: YModule) => this.deviceRemoval(m))

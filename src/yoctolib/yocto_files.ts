@@ -1,6 +1,6 @@
 /*********************************************************************
  *
- *  $Id: yocto_files.ts 72057 2026-02-17 09:44:53Z mvuilleu $
+ *  $Id: yocto_files.ts version 2.1.16909 (build 76909) $
  *
  *  Implements the high-level API for FileRecord functions
  *
@@ -427,6 +427,19 @@ export class YFiles extends YFunction
      */
     async download(pathname: string): Promise<Uint8Array>
     {
+        let idx: number;
+        let plen: number;
+        let res: Uint8Array;
+        plen = (pathname).length;
+        idx = 0;
+        while ((idx < plen) && pathname.substr(idx, 1) == '/') {
+            idx = idx + 1;
+        }
+        if ((idx < plen) && pathname.substr(idx, 1) == '.') {
+            this._throw(this._yapi.INVALID_ARGUMENT, 'Remote file access forbidden');
+            res = new Uint8Array(0);
+            return res;
+        }
         return await this._download(pathname);
     }
 
@@ -520,6 +533,43 @@ export class YFiles extends YFunction
         res = (this._yapi.imm_bincrc(meta,0,4 * blkcnt) ^ (<number> 0xffffffff));
         res = ((res & 0x7fffffff) - 2 * ((res >> 1) & 0x40000000));
         return res;
+    }
+
+    /**
+     * Returns true if the path given as argument meets the requirements
+     * for use on a Yoctopuce device. This method checks for the
+     * maximum file name length, total path length and forbidden
+     * characters.
+     *
+     * @param path : a string representing a path
+     *
+     * @return a boolean
+     */
+    async isValidPath(path: string): Promise<boolean>
+    {
+        let parts: string[] = [];
+        let pathLen: number;
+        let i: number;
+        let allowedChars: string;
+        pathLen = (path).length;
+        if (pathLen > 250) {
+            return false;
+        }
+        parts = (path).split('/');
+        for (let ii_0 of parts) {
+            if ((ii_0).length > 31) {
+                return false;
+            }
+        }
+        allowedChars = 'abcdefghijklmnopqrstuvwxyz./ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789_-[]()@';
+        i = 0;
+        while (i < pathLen) {
+            if ((allowedChars).indexOf(path.substr(i, 1)) < 0) {
+                return false;
+            }
+            i = i + 1;
+        }
+        return true;
     }
 
     /**

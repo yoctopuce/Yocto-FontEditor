@@ -103,6 +103,8 @@ function packageApp() {
         const JavascriptCcode = fs.readFileSync('dist/Yocto-FontEditor.min.js', 'utf8');
         entryPointFile = entryPointFile.replace("import { WebApp }  from './Yocto-FontEditor.min.js'; // do not modify", JavascriptCcode);
         fs.writeFileSync('dist/Yocto-FontEditor.html', entryPointFile, 'utf8');
+        fs.unlinkSync('dist/Yocto-FontEditor.min.js');
+        fs.unlinkSync('dist/Yocto-FontEditor.min.js.map');
         // Creating readable Stream
         const inp = fs.createReadStream('dist/Yocto-FontEditor.html');
         const out = fs.createWriteStream('dist/Yocto-FontEditor.html.gz');

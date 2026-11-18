@@ -1,6 +1,6 @@
 /*********************************************************************
  *
- * $Id: yocto_api.ts 75622 2026-08-19 07:56:53Z mvuilleu $
+ * $Id: yocto_api.ts version 2.1.16909 (build 76909) $
  *
  * High-level programming interface, common to all modules
  *
@@ -6206,7 +6206,7 @@ export class YModule extends YFunction
             sep = '';
             for (let ii_1 of filelist) {
                 name = this.imm_json_get_key(ii_1, 'name');
-                if (((name).length > 0) && !(name == 'startupConf.json')) {
+                if (((name).length > 0) && !(name == 'startupConf.json') && !(name.substr(0, 1) == '.')) {
                     if (name.substr((name).length-1, 1) == '/') {
                         file_data = '';
                     } else {
@@ -9670,7 +9670,8 @@ export class YGenericHub
                 }
                 try {
                     let data: Uint8Array = await this._yapi.system_env.downloadfile(url, this._yapi);
-                    infoJson = JSON.parse(YAPI.imm_bin2str(data));
+                    let datastr: string = YAPI.imm_bin2str(data);
+                    infoJson = JSON.parse(datastr);
                     if (infoJson) {
                         infoJson.stamp = YAPI.GetTickCount();
                         if (infoJson.serialNumber) {
@@ -9802,15 +9803,12 @@ export class YGenericHub
      */
     imm_signalHubDisconnected(tryOpenID: string): boolean
     {
-
         if (this._yapi._logLevel >= 4) {
             this._yapi.imm_log('imm_signalHubDisconnected  ' + this.urlInfo.imm_getRootUrl());
         }
-
         if (this._currentState > Y_YHubConnType.HUB_DISCONNECTED) {
             this.imm_setState(Y_YHubConnType.HUB_DISCONNECTED);
         }
-
         this.isNotifWorking = false;
         this.devListExpires = 0;
         this._yapi.imm_dropConnectedHub(this);
@@ -9839,8 +9837,13 @@ export class YGenericHub
             return true;
         }
         // need to schedule next retry
+        let nextOpenID: string;
         let openIDwords = tryOpenID.split('_');
-        let nextOpenID = openIDwords[0] + '_' + (parseInt(openIDwords[1]) + 1).toString();
+        if(openIDwords.length > 1) {
+            nextOpenID = openIDwords[0] + '_' + (parseInt(openIDwords[1]) + 1).toString();
+        } else {
+            nextOpenID = String.fromCharCode(Math.random() * 79 + 48, Math.random() * 79 + 48, Math.random() * 79 + 48);
+        }
         if (this.retryDelay < 5000) this.retryDelay *= 2;
         if (this._yapi._logLevel >= 4) {
             this._yapi.imm_log('Hub reconnection scheduled in ' + (this.retryDelay / 1000) + 's [' + nextOpenID + ']');
@@ -12506,7 +12509,7 @@ export class YAPIContext
     _networkTimeoutMs: number = DEFAULT_NETWORK_TIMEOUT_MS;
     _deviceListValidityMs: number = DEFAULT_DEVICE_LIST_VALIDITY_MS;
     _crcTable: Int32Array | null = null;
-    defaultEncoding: string = 'binary';             // Default string encoding used in the library
+    defaultEncoding: string = 'iso-8859-1';        // Default string encoding used in the library
     exceptionsDisabled: boolean = false;
     /* make sure to add code to reset any new property in imm_ResetToDefaults() */
     //--- (generated code: YAPIContext attributes declaration)
@@ -13545,19 +13548,18 @@ export class YAPIContext
         return num;
     }
 
-    /** Convert a binary object to string
+    /** Convert an iso-latin-1 encoded binary object to string
      */
     imm_bin2str(bin_data: Uint8Array): string
     {
-        /** @type {number} **/
-        let len = bin_data.length;
-        /** @type {string} **/
-        let res = '';
-        for (let i = 0; i < len; i += 20) {
-            let subdata = bin_data.subarray(i, Math.min(i + 20, len));
-            res += String.fromCharCode.apply(null, Array.from(subdata));
-        }
-        return res;
+        return new TextDecoder(this.defaultEncoding).decode(bin_data);
+    }
+
+    /** Convert an utf-8 encoded binary object to string
+     */
+    imm_utf2str(bin_data: Uint8Array, int_start: number, int_len: number): string
+    {
+        return new TextDecoder().decode(bin_data.subarray(int_start, int_start + int_len));
     }
 
     /** Convert a string to binary object
@@ -14321,10 +14323,9 @@ export class YAPIContext
     }
 
     /**
-     * Returns the path to the dynamic YAPI library. This function is useful for debugging problems loading the
-     * dynamic library YAPI. This function is supported by the C#, Python and VB languages. The other
-     * libraries return an
-     * empty string.
+     * Returns the path to the dynamic YAPI library. This function is useful for debugging
+     * problems loading the dynamic library YAPI. This function is supported by the C#,
+     * Python and VB languages. The other libraries return an empty string.
      *
      * @return a string containing the path of the YAPI dynamic library.
      */
@@ -14529,7 +14530,7 @@ export class YAPIContext
 
     imm_GetAPIVersion(): string
     {
-        return /* version number patched automatically */'2.1.15804';
+        return /* version number patched automatically */'2.1.16909';
     }
 
     /**
@@ -14718,6 +14719,9 @@ export class YAPIContext
         if (this._logLevel >= 4) {
             this.imm_log('Registering hub: ' + url);
         }
+        if (!url) {
+            return this.imm_setErr(errmsg, YAPI_INVALID_ARGUMENT, 'invalid empty URL', YAPI_INVALID_ARGUMENT);
+        }
         if (url === "net") {
             if (this.system_env.hasSSDP) {
                 this._detectType |= this.DETECT_NET;
@@ -14790,6 +14794,9 @@ export class YAPIContext
      */
     async PreregisterHub(url: string, errmsg: YErrorMsg): Promise<number>
     {
+        if (!url) {
+            return this.imm_setErr(errmsg, YAPI_INVALID_ARGUMENT, 'invalid empty URL', YAPI_INVALID_ARGUMENT);
+        }
         let urlInfo: _YY_UrlInfo = new _YY_UrlInfo(url);
         let hub: YGenericHub | null = this.imm_getHub(urlInfo);
         if (!hub) {
@@ -14992,6 +14999,9 @@ export class YAPIContext
      */
     async TestHub(url: string, mstimeout: number, errmsg: YErrorMsg): Promise<number>
     {
+        if (!url) {
+            return this.imm_setErr(errmsg, YAPI_INVALID_ARGUMENT, 'invalid empty URL', YAPI_INVALID_ARGUMENT);
+        }
         if (url == "net") {
             return this.imm_setErr(errmsg, YAPI_INVALID_ARGUMENT, "Not supported", YAPI_INVALID_ARGUMENT);
         }

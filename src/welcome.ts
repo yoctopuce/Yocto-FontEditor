@@ -43,6 +43,7 @@ import {YFiles, YFileRecord} from './yoctolib/yocto_files.js';
 import {Const} from './constants.js';
 import {CanvasMagnifier} from './canvasMagnifier.js';
 import {ressources} from "./ressources.js";
+import {BDFdecoder} from "./bdf_decoder.js";
 
 type WelcomeCompletedCallback = (selectedFontFsSerial: string | null, filename: string | null) => void
 type WelcomeCanceledCallback = () => void
@@ -54,6 +55,47 @@ export class ttfFont
     private select: HTMLInputElement;
     private label: HTMLLabelElement;
     private name: string = "";
+    static RenderingTestWidth  :number  = 50
+    static RenderingTestHeight :number  = 16
+    static refFontCanvas : HTMLCanvasElement | null = null;
+    static refFontCanvasCtx : CanvasRenderingContext2D | null = null;
+    static refPixels :ImageData |null = null;
+    static Signature : string = "Démg%!"
+    static FontList : HTMLLabelElement[] =  []
+
+    private static  testFontProperRendering(fontname:string):boolean
+    {
+      if (fontname=="Times New Roman") return true;  // FireFox default font.
+      if  (!ttfFont.refFontCanvasCtx)
+      {
+        ttfFont.refFontCanvas        = document.createElement("canvas")
+        ttfFont.refFontCanvas.width  = ttfFont.RenderingTestWidth;
+        ttfFont.refFontCanvas.height = ttfFont.RenderingTestHeight;
+        ttfFont.refFontCanvas.style.backgroundColor = "white";
+
+
+        ttfFont.refFontCanvasCtx = ttfFont.refFontCanvas.getContext("2d", {willReadFrequently: true})
+        if  (ttfFont.refFontCanvasCtx)
+        { ttfFont.refFontCanvasCtx.textBaseline = "top"
+          ttfFont.refFontCanvasCtx.font = ttfFont.RenderingTestHeight.toString()+"px FAKEfOnt"
+          ttfFont.refFontCanvasCtx.fillStyle = "black";
+          ttfFont.refFontCanvasCtx.fillText(ttfFont.Signature, 0, 0);
+          //document.body.appendChild(ttfFont.refFontCanvas)
+          ttfFont.refPixels = ttfFont.refFontCanvasCtx.getImageData(0, 0, ttfFont.RenderingTestWidth, ttfFont.RenderingTestHeight)
+        }
+      }
+      if (!ttfFont.refFontCanvasCtx)  return false
+      if  (ttfFont.refPixels)
+      {  ttfFont.refFontCanvasCtx.clearRect(0, 0, ttfFont.RenderingTestWidth, ttfFont.RenderingTestHeight);
+         ttfFont.refFontCanvasCtx.font = ttfFont.RenderingTestHeight.toString()+"px "+fontname
+         ttfFont.refFontCanvasCtx.fillText(ttfFont.Signature, 0, 0);
+         let pixels : ImageData  = ttfFont.refFontCanvasCtx.getImageData(0, 0, ttfFont.RenderingTestWidth, ttfFont.RenderingTestHeight)
+         for (let i:number =0;i< pixels.data.byteLength;i++)
+           if (pixels.data[i] != ttfFont.refPixels.data[i]) return true;
+      }
+        return false
+    }
+
 
     constructor(fontName: string, onchange: SelectionChanged)
       {
@@ -66,14 +108,32 @@ export class ttfFont
         this.select.id = id
         this.select.value = id
         this.select.style.marginLeft = "10px"
+
         if (this.name == "Arial") this.select.checked = true  // Arial is supposed to be a Web safe font
         this.label = document.createElement("label");
         this.label.htmlFor = id
         this.label.innerText = this.name = fontName
-        this.label.style.fontFamily = fontName
+        ttfFont.FontList.push(this.label)
+
         this.label.style.fontSize = "20px"
         this.select.addEventListener("change", () => {onchange()})
       }
+    // used to perform font list rendering progressively,
+    static  StartFontRendering()
+    {  for (let i:number =0;i<10;i++)
+        { if  (ttfFont.FontList.length<=0) return
+          let l : HTMLLabelElement = ttfFont.FontList[0];
+          ttfFont.FontList.splice(0, 1);
+          let fontname :string  = l.innerText;
+          l.style.fontFamily = fontname
+          if (! ttfFont.testFontProperRendering(fontname))
+           { l.style.color = "LightGray" ;
+            l.title ="Your browser blocked the renderering of '"+fontname+"' font. It might beleive this is  part of a fingerprinting scheme. You can either disable this security feature for this page, or use another browser. "
+          }
+        }
+      if  (ttfFont.FontList.length>0) requestAnimationFrame((id)=>ttfFont.StartFontRendering())
+
+    }
 
     public get fontName(): string { return this.name }
 
@@ -183,12 +243,27 @@ export class WelcomePanel
     private fromScratch: HTMLInputElement;
     private loadFileFromYfile: HTMLInputElement;
     private loadFileFromLocalFileSystem: HTMLInputElement;
-    private ImportFont: HTMLInputElement;
+    private ImportTtfFont: HTMLInputElement;
+    private  ImportBdfFont: HTMLInputElement;
     private activeDiv: HTMLDivElement;
     private loadResultDiv: HTMLDivElement;
+    private bdfList : BDFdecoder[]   = [];
+    private currentBdfFont: BDFdecoder | null = null
+    private bdfChooserCells : HTMLCanvasElement[]   = [];
+
     private scratchDiv: HTMLDivElement;
     private yfileDiv: HTMLDivElement;
     private localfsDiv: HTMLDivElement;
+    private bdfDiv: HTMLDivElement;
+    private bdfTable : HTMLTableElement
+    private sampleUI: HTMLParagraphElement
+    private bdfsampleText : HTMLInputElement
+    private bdfSampleCanvas : HTMLCanvasElement
+    private bdfError: HTMLParagraphElement
+    private bdfCopyright : HTMLParagraphElement
+
+    private bdfFontList: HTMLDivElement
+
     private ttfDiv: HTMLDivElement;
     private scratchFirstChar: HTMLInputElement
     private scratchLastChar: HTMLInputElement
@@ -198,6 +273,7 @@ export class WelcomePanel
     private yfileFileList: HTMLTableElement
     private yfileFileListContainer: HTMLDivElement
     private localfsFile: HTMLInputElement
+    private bdfFile: HTMLInputElement
     private fontListHeader: HTMLParagraphElement
     private connectError: HTMLParagraphElement
     private yFileFonts: YFileFont[] = []
@@ -226,6 +302,12 @@ export class WelcomePanel
     private static BadInputColor: string = Const.BadInputBgColor;
     private static noYfmFileMsg: string = ressources.smallWarningIcon() + "&nbsp;" + "There is no .yfm font file available, connect to a hub";
 
+    private requiresVirtualHubMsg(badversion:boolean=false,badBuild:boolean=false)
+    { return   "This feature requires a VirtualHub "
+             + (badversion?"<b>":"") +"V2"+ (badversion?"</b>":"")
+             + ", "+  (badBuild?"<b>":"") +"at least version 2.1.14003"+ (badBuild?"</b>":"")
+             + ", running on the local machine"
+    }
     constructor(container: HTMLDivElement, charCollection: CharacterChooser, welcomeCompleted: WelcomeCompletedCallback, welcomeCancelled: WelcomeCanceledCallback)
       {
         this.charCollection = charCollection;
@@ -247,7 +329,8 @@ export class WelcomePanel
         this.fromScratch = this.AddOption('scratch', "Create a new font from scratch")
         this.loadFileFromYfile = this.AddOption('yfile', "Edit a .yfm font file from a Yoctopuce filesystem")
         this.loadFileFromLocalFileSystem = this.AddOption("localfs", "Edit a .yfm font file from the local filesystem")
-        this.ImportFont = this.AddOption("ttf", "Import a TrueType font from local computer")
+        this.ImportBdfFont = this.AddOption("bdf", "Import a BDF font from local computer")
+        this.ImportTtfFont = this.AddOption("ttf", "Import a TrueType font from local computer")
         this.activeDiv = document.createElement('div')
         this.activeDiv.style.marginLeft = "40px";
         this.container.appendChild(this.activeDiv);
@@ -275,7 +358,7 @@ export class WelcomePanel
         this.scratchDiv.appendChild(table)
         this.activeDiv.appendChild(this.scratchDiv);
         /*
-         font from Yoctopuce file systms
+         font from Yoctopuce file system
          */
         this.yfileDiv = document.createElement('div')
         this.yfileDiv.style.display = "none"
@@ -322,7 +405,7 @@ export class WelcomePanel
         this.yfileFileListContainer.appendChild(this.yfileFileList)
         this.yfileDiv.appendChild(this.yfileFileListContainer)
         /*
-         font from local file systms
+         font from local file systems
          */
         this.localfsDiv = document.createElement('div')
         this.localfsDiv.style.display = "none"
@@ -338,12 +421,80 @@ export class WelcomePanel
         this.localfsFile.addEventListener("change", async () => { await this.loadFromLocalfs(); })
         this.localfsDiv.appendChild(this.localfsFile)
         this.activeDiv.appendChild(this.localfsDiv);
+
+        /*
+         BDF font from local file systms
+         */
+        this.bdfDiv = document.createElement('div')
+        this.bdfDiv.style.display = "none"
+        p = document.createElement("p")
+        p.innerText = "Import a Glyph Bitmap Distribution Format (BDF) font from local file system, choose one or more  BDF files: "
+        this.bdfDiv.appendChild(p)
+        this.bdfFile = document.createElement("input")
+        this.bdfFile.type = "file"
+        this.bdfFile.accept = '.bdf';
+        this.bdfFile.id = "bdfChooser"
+        this.bdfFile.multiple=true
+        this.bdfFile.addEventListener("change", async () => { await this.loadBdfFiles(); })
+        p.appendChild(this.bdfFile)
+        this.bdfTable = document.createElement('table')
+        let tr : HTMLTableRowElement  = document.createElement('tr')
+        let td : HTMLTableCellElement = document.createElement('td')
+        this.bdfFontList  = document.createElement('div')
+        this.bdfFontList.style.backgroundColor="white"
+        this.bdfFontList.style.width="200px"
+        this.bdfFontList.style.height="200px"
+        this.bdfFontList.style.overflowX="hidden"
+        this.bdfFontList.style.overflowY="auto"
+        this.bdfFontList.style.whiteSpace="nowrap"
+        this.bdfFontList.style.border="1px solid black"
+        td.appendChild(this.bdfFontList )
+        tr.appendChild(td)
+        td  = document.createElement('td')
+        td.style.verticalAlign="top"
+        this.sampleUI  = document.createElement("p")
+        this.sampleUI.style.marginLeft="10px"
+        this.sampleUI.innerText="Type some sample text:"
+        this.bdfsampleText  =  document.createElement('input')
+        this.bdfsampleText.value= Const.DemoText;
+        this.bdfsampleText.addEventListener("input",()=>{ this.bdfPreview()})
+        this.sampleUI.appendChild(this.bdfsampleText)
+        this.bdfSampleCanvas =  document.createElement('canvas')
+        this.bdfSampleCanvas.width=420;
+        this.bdfSampleCanvas.height=96;
+        this.bdfSampleCanvas.style.marginTop="5px";
+        this.bdfSampleCanvas.style.border="1px solid black"
+        this.bdfSampleCanvas.style.backgroundColor="white"
+        this.bdfSampleCanvas.style.display="";
+        new CanvasMagnifier(this.bdfSampleCanvas)
+        this.sampleUI.appendChild(this.bdfSampleCanvas)
+        this.bdfCopyright = document.createElement('p')
+        this.bdfCopyright.style.fontSize="smaller"
+        this.bdfCopyright.style.color ="darkgray"
+        this.bdfCopyright.style.textAlign =   "justify"
+        this.bdfCopyright.style.paddingLeft ="20px"
+        this.bdfCopyright.style.paddingRight ="20px"
+        this.bdfCopyright.style.verticalAlign ="top"
+        this.sampleUI.appendChild(this.bdfCopyright)
+        td.appendChild(this.sampleUI)
+        this.bdfError = document.createElement('p')
+        this.bdfError.style.display="";
+        this.bdfError.style.paddingLeft="10px";
+        this.bdfError.style.paddingRight="10px";
+        this.bdfError.style.textAlign="justify"
+        td.appendChild(this.bdfError)
+        tr.appendChild(td)
+        this.bdfTable.appendChild(tr)
+        this.bdfTable.style.display="none"
+        this.bdfDiv.appendChild(this.bdfTable)
+        this.activeDiv.appendChild(this.bdfDiv);
+
         /*
          font from local TTF font
          */
         this.ttfDiv = document.createElement('div')
         this.ttfDiv.style.display = "none"
-        this.ttfDiv.innerHTML = "<br>This feature requires a VirtualHubV2 running on the local machine"
+        this.ttfDiv.innerHTML = "<br>"+this.requiresVirtualHubMsg()
         this.activeDiv.appendChild(this.ttfDiv);
         this.container.appendChild(this.activeDiv)
         this.loadResultDiv = document.createElement("div")
@@ -405,6 +556,80 @@ export class WelcomePanel
         return false
       }
 
+    private onBdfFontSelected (font: BDFdecoder | null)
+      { this.currentBdfFont = null
+        if (font)
+          {let err :string = font.errorMsg();
+            if (err=="")
+              {
+                this.sampleUI.style.display="";
+                this.bdfError.style.display="none";
+
+                this.currentBdfFont = font
+                this.bdfPreview()
+              }
+            else
+              {
+                this.sampleUI.style.display="none";
+                this.bdfError.style.display="";
+                this.bdfError.innerHTML =  ressources.smallWarningIcon() + "&nbsp; Cannot use  file <b>" + font.getFilename()+"</b> : " + err
+                this.bdfCopyright.innerText = "";
+
+              }
+
+
+          }
+        this.sanityCheck()
+      }
+
+    private bdfloadCompleted(event: ProgressEvent<FileReader>,filename:string)
+      {
+        if (event.target != null) if (event.target.result != null)
+        {
+
+          let decoder :TextDecoder=   new TextDecoder("utf-8");
+          let  data :string = decoder.decode(event.target.result as ArrayBuffer)
+          let font :BDFdecoder  = new BDFdecoder()
+          font.parse(data,filename)
+          this.bdfList.push(font)
+          let c :HTMLCanvasElement = document.createElement("canvas")
+          c.title= filename;
+          font.drawDemo(c)
+          c.style.display="inline"
+          c.style.verticalAlign="middle"
+
+          let input:HTMLInputElement = document.createElement("input")
+          input.type = "radio"
+          input.id   = filename
+          input.name = "BDFfile"
+          input.value= filename
+          input.addEventListener("change",()=>{this.onBdfFontSelected(font)})
+          let label : HTMLLabelElement = document.createElement("label")
+          label.htmlFor = input.id
+          label.appendChild(c)
+          this.bdfFontList.appendChild(input)
+          this.bdfFontList.appendChild(label)
+          this.bdfFontList.appendChild(document.createElement("br"))
+          if (this.bdfList.length==1)
+            { input.checked=true
+              this.onBdfFontSelected(font)
+            }
+          this.bdfFontList.style.display= (this.bdfList.length>1) ? "" : "none"
+
+          this.bdfTable.style.paddingLeft=(this.bdfList.length>1) ? "0px" : "100px"
+
+        }
+        this.sanityCheck()
+
+      }
+    private  bdfPreview()
+      { if (! this.currentBdfFont) return;
+        this.currentBdfFont.previewFont(this.bdfSampleCanvas, this.bdfsampleText.value)
+        this.bdfCopyright.style.textAlign = (this.currentBdfFont.getCopyright().length > 60) ? "justify" : "right"
+        this.bdfCopyright.innerText = this.currentBdfFont.getCopyright()
+      }
+
+
     private loadCompleted(event: ProgressEvent<FileReader>)
       {
         if (event.target != null) if (event.target.result != null)
@@ -422,6 +647,30 @@ export class WelcomePanel
             this.sanityCheck()
           }
       }
+
+   private async loadBdfFiles()
+    { this.showloadResult("", false);
+      this.bdfTable.style.display=""
+
+
+      this.bdfList = []
+      while (this.bdfFontList.firstChild)  { // @ts-ignore
+        this.bdfFontList.removeChild(this.bdfFontList.lastChild);
+      }
+      // @ts-ignore
+      let files: File[] = this.bdfFile.files;
+
+      if (files)
+        {for (let i=0;i<files.length;i++)
+          {
+            let reader = new FileReader();
+            this.dataLoadedFromLocalFsFilename = files[i].name
+            reader.addEventListener("loadend", (event: ProgressEvent<FileReader>) => { this.bdfloadCompleted(event, files[i].name) })
+            await reader.readAsArrayBuffer(files[i]);
+          }
+        }
+
+    }
 
     private async loadFromLocalfs()
       {
@@ -442,6 +691,8 @@ export class WelcomePanel
         if (isError) this.loadResultDiv.innerHTML = ressources.smallWarningIcon() + "&nbsp;" + msg; else this.loadResultDiv.innerHTML = ressources.smallInfoIcon() + "&nbsp;" + msg;
         this.loadResultDiv.style.display = msg == "" ? "none" : ""
       }
+
+
 
     private chosenYFontFile(): YFileFont | null
       {
@@ -500,19 +751,20 @@ export class WelcomePanel
     private async refreshTtfFontList()
       {
         let virtualHubUrl: string = "";
+        let virtualSerial: string = "";
         let virtualHubFound: boolean = false;
         if (this.virtualHubIsPresent) return;
         // search for a local VirtualHub V2 with active connection
         let h = YHub.FirstHubInUse()
         while (h != null)
           {
-            if (h.get_connectionState() == YHub.CONNECTED) if (h.get_serialNumber().startsWith("VIRTHUB2"))
+            if (h.get_connectionState() == YHub.CONNECTED) if (h.get_serialNumber().startsWith("VIRTHUB"))
               {
                 let urls: string[] = h.get_knownUrls()
                 for (let i: number = 0; i < urls.length; i++)
                   {
                     if (urls[i].indexOf("127.0.0.1") >= 0)
-                      {
+                      { virtualSerial = h.get_serialNumber()
                         virtualHubUrl = h.get_connectionUrl();
                         virtualHubFound = true
                       }
@@ -521,6 +773,19 @@ export class WelcomePanel
             h = h.nextHubInUse()
           }
         if (!virtualHubFound) return;
+        if  (!virtualSerial.startsWith("VIRTHUB2"))
+        {
+          this.ttfDiv.innerHTML = "<br>"+this.requiresVirtualHubMsg(true)
+          return
+        }
+        let m :YModule = YModule.FindModule(virtualSerial+".module")
+        let firmware :number = parseInt(await m.get_firmwareRelease())
+        if (!isNaN(firmware))
+           if (firmware<74003)
+           { this.ttfDiv.innerHTML = "<br>"+this.requiresVirtualHubMsg(false,true)
+             return
+           }
+
         // get font list
         virtualHubUrl = virtualHubUrl.replace("ws:", "http:")
         console.log(virtualHubUrl)
@@ -555,6 +820,7 @@ export class WelcomePanel
             listContainer.appendChild(this.availableTTfFonts[i].labelElement);
             listContainer.appendChild(document.createElement("br"));
           }
+        ttfFont.StartFontRendering(); // background rendering of font list
         td.appendChild(listContainer);
         tr.appendChild(td);
         td = document.createElement("td")
@@ -732,7 +998,7 @@ export class WelcomePanel
             this.ttfDemoInternalcanvas.style.border = "1px solid #d0d0d0"
             this.ttfDemoInternalcanvasCtx = this.ttfDemoInternalcanvas.getContext("2d", {willReadFrequently: true})
             if (this.ttfDemoInternalcanvasCtx == null) throw new RangeError("Unable to get Canvas context")
-            sanityCheckIsRequired = this.ImportFont.checked
+            sanityCheckIsRequired = this.ImportTtfFont.checked
           }
         if (this.ttfDemoInternalcanvasCtx == null) return // useless, but prevents TS error
         let selectedFont: ttfFont | null = this.selectedTtfFont()
@@ -892,7 +1158,9 @@ export class WelcomePanel
         if (this.fromScratch.checked) ok = this.scratchSanityCheck();
         if (this.loadFileFromYfile.checked) ok = this.chosenYFontFile() != null
         if (this.loadFileFromLocalFileSystem.checked) ok = this.dataLoadedFromLocalFs != null
-        if (this.ImportFont.checked) ok = this.checkTtFontValue()
+        if (this.ImportTtfFont.checked) ok = this.checkTtFontValue()
+        if (this.ImportBdfFont.checked) ok = (this.currentBdfFont != null)
+
         this.letGoBtn.enabled = ok;
       }
 
@@ -902,6 +1170,7 @@ export class WelcomePanel
         this.scratchDiv.style.display = id == 'scratch' ? "" : "none";
         this.yfileDiv.style.display = id == 'yfile' ? "" : "none";
         this.localfsDiv.style.display = id == 'localfs' ? "" : "none";
+        this.bdfDiv.style.display = id == 'bdf' ? "" : "none";
         this.ttfDiv.style.display = id == 'ttf' ? "" : "none";
         this.sanityCheck();
       }
@@ -966,12 +1235,20 @@ export class WelcomePanel
                 this.welcomeCompleted(selected.fileSystemSerial, selected.fontFilename)
               }
           }
-        if ((this.loadFileFromLocalFileSystem.checked) && (this.dataLoadedFromLocalFs != null))
+
+        if ((this.ImportBdfFont.checked) && (this.currentBdfFont) )
+          {
+            this.charCollection.initFromBdfData(this.currentBdfFont)
+            this.welcomeCompleted(null, this.dataLoadedFromLocalFsFilename)
+
+          }
+
+          if ((this.loadFileFromLocalFileSystem.checked) && (this.dataLoadedFromLocalFs != null))
           {
             this.charCollection.initFromYfmData(this.dataLoadedFromLocalFs)
             this.welcomeCompleted(null, this.dataLoadedFromLocalFsFilename)
           }
-        if (this.ImportFont.checked)
+        if (this.ImportTtfFont.checked)
           {
             if (this.ttfFontSize == null) return
             if (this.ttfFirstChar == null) return

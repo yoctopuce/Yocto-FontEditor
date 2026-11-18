@@ -2,7 +2,7 @@
  *   Yocto-FontEditor, a free web-based application
  *   to create .yfm font files for Yoctopuce displays
  *
- *  Character and character set rendered
+ *   Character and character set renderer
  *
  *   - - - - - - - - - License information: - - - - - - - - -
  *
@@ -36,6 +36,7 @@
  *  WARRANTY, OR OTHERWISE.
  */
 import {GridSelection} from "./selection.js";
+import {BDFdecoder} from "./bdf_decoder.js";
 
 export class YfmtFileHeader
   {
@@ -541,6 +542,22 @@ export class CharacterSetRenderer
         this._baseline = header.baseline;
         body.removeChild(canvas)
       }
+    public initFromBdfData(bdfData: BDFdecoder)
+      { this._baseline = bdfData.getBaseLine()
+        this._generalHeight = bdfData.getHeight()
+
+        for (let ascii: number = 0; ascii <= 266; ascii++)
+          { this.charList[ascii] = null
+            let img: ImageData | null = bdfData.getChar(ascii)
+            if (img) if (img.width > 0)
+              {
+                this.charList[ascii] = new CharacterRenderer("",img.width, bdfData.getHeight(), 0, String.fromCharCode(ascii))
+
+                // @ts-ignore
+                this.charList[ascii].setContents(img)
+              }
+          }
+      }
 
     public initFromScratch(first: number, last: number, width: number, height: number)
       {
@@ -549,6 +566,7 @@ export class CharacterSetRenderer
             if ((i < first) || (i > last)) this.charList[i] = null; else this.charList[i] = new CharacterRenderer("", width, height, 0, String.fromCharCode(i))
           }
         this._baseline = 1;
+        this._generalHeight = height ;
       }
 
     public async importFromFont(fontName: string, fontSizeInPx: number, firstchar: number, lastchar: number, antiAliasingFilter: number, fillStroke: number, outlineWidth: number)
@@ -605,9 +623,11 @@ export class CharacterSetRenderer
         console.log("offsetTop= " + ofsetTop + "/" + delta)
         console.log("offsetBot= " + ofsetBottom + "/" + delta)
         this._generalHeight = height - ofsetTop - ofsetBottom;
+        if (this._generalHeight>255)this._generalHeight=255
+
         let pixelcount: number[] = new Array(height).fill(0);
         let blackpixelcount: number[] = new Array(height).fill(0);
-        // sample all characters
+        // sample all characters 
         ctx.textBaseline = "top";
         this.charList = [];
         for (let i: number = 0; i < firstchar; i++) this.charList.push(null);

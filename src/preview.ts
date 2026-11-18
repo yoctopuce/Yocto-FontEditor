@@ -44,6 +44,7 @@ import {YAPI, YErrorMsg, YModule} from "./yoctolib/yocto_api.js";
 import {YDisplay, YDisplayLayer} from "./yoctolib/yocto_display.js";
 import {TimeMachine} from "./timemachine.js";
 import {CanvasMagnifier} from "./canvasMagnifier.js";
+import {ExportFontUI} from "./export.js";
 
 enum COLORSCHEME
   {
@@ -313,15 +314,17 @@ export class TextPreview extends UserInterfacePanel
     private portraitBtn: ImgButton;
     private errmsg: HTMLDivElement;
     private sizeIndicator: HTMLDivElement;
+    private exportUI :ExportFontUI;
     private refreshTriggerTimeout: NodeJS.Timeout | null = null
     demoWidth: number = 128
     demoHeight: number = 64
     demoStyle: number = COLORSCHEME.OLED
 
-    constructor(container: HTMLDivElement, characterset: CharacterChooser)
+    constructor(container: HTMLDivElement, characterset: CharacterChooser, exportUI : ExportFontUI)
       {
         super(container, true, true, false)
         this.setTitle("Preview");
+        this.exportUI = exportUI;
         this.characterset = characterset;
         this.body.style.display = "flex";
         this.body.style.alignItems = "center";
@@ -563,8 +566,18 @@ export class TextPreview extends UserInterfacePanel
         let sizeInt: number = TimeMachine.currentSize();
         let sizeStr: string = sizeInt.toString() + " Bytes"
         if (sizeInt >= 1024) sizeStr = (Math.round(100 * sizeInt / 1024) / 100).toString() + " KB"
-        this.sizeIndicator.innerText = "Expected file size: " + sizeStr
-        if ((!currentChoice.isEmulation) && (drawing != null))
+        if (sizeInt>65535)
+        { this.sizeIndicator.style.color="red";
+          this.sizeIndicator.innerText = "Expected file size: " + sizeStr +" (max is 64K) ";
+          this.exportUI.canExportFontFile(false)
+        }
+        else
+        { this.sizeIndicator.style.color=Const.headerTxtColor;
+          this.sizeIndicator.innerText = "Expected file size: " + sizeStr
+          this.exportUI.canExportFontFile(true)
+
+        }
+          if ((!currentChoice.isEmulation) && (drawing != null))
           {
             await (currentChoice as preViewStyleElementHWD).refreshHwdDisplay(drawing, this.errmsg)
           }

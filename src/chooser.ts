@@ -40,6 +40,7 @@ import {BtnFeature, ressources} from "./ressources.js"
 import {Button, ImgButton} from "./button.js"
 import {UserInterfacePanel} from "./uipanel.js";
 import {TimeMachine} from './timemachine.js'
+import {BDFdecoder} from "./bdf_decoder.js";
 
 interface onCharSelectedCallback {(char: CharacterRenderer | null): void}
 
@@ -214,6 +215,13 @@ export class CharacterChooser extends UserInterfacePanel
       {
         this.renderer.initFromScratch(firstChar, lastChar, width, height)
         this.refreshCharactersTable()
+      }
+
+    public initFromBdfData(bdfData: BDFdecoder)
+      { this.renderer.initFromBdfData(bdfData)
+        this.refreshCharactersTable()
+
+
       }
 
     public initFromYfmData(data: Uint8Array)

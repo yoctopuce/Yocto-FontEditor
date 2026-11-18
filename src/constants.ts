@@ -40,7 +40,7 @@ export class Const
     // application name
     public static readonly appTitle: string = 'Yoctopuce displays .yfm font editor'
     public static readonly appName: string = 'Yocto-FontEditor'
-    public static readonly version: string = '75804'
+    public static readonly version: string = '76909'
     public static readonly WelcomePanelBgColor: string = "#f0f0f0"
     public static readonly titleBgColor: string = "#2b69e7"
     public static readonly titleTxtColor: string = "white"
@@ -59,4 +59,5 @@ export class Const
     public static readonly ButtonDisabledBorderColor: string = "#808080"
     public static readonly ImgButtonSize: number = 32
     public static readonly BadInputBgColor: string = "#FFa0a0"
+    public static readonly DemoText: string = "ABC {efg} [123]"
   }

@@ -1,3 +1,11 @@
-Yocto-FontEditor v2.1.15804
+Yocto-FontEditor v2.1.16909
 
-- First release
+- Fixed wrong copy-paste character  offset
+- Added detection of font rendering blocked by the browser.
+- Font list rendering is now progressive
+- Improvement VirtualHub requirement message.
+- Added support for BDF fonts
+- Minor aesthetic improvements
+- Fixed export crashing with some fonts
+- Prevent from trying to register the origin if it's a web site.
+- Prevent creation of font files larger than 64K
